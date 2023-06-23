@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beanclerk"
+version = "0.0.1"
+authors = [
+  { name = "Petr Beranek", email = "petrberanek.mail@gmail.com" },
+]
+description = "Automate repetitive tasks when managing Beancount files."
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["finance", "beancount", "automation", "API"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Programming Language :: Python :: 3.10",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Office/Business :: Financial",
+]
+dependencies = [
+  "PyYAML==6.0",
+  "beancount==2.3.5",
+  "click==8.1.3",
+  "voluptuous==0.13.1",
+]
+
+[project.optional-dependencies]
+devel = [
+  "build==0.10.0",
+  "pre-commit==3.3.1",
+  "pylint==2.17.4",
+  "pytest==7.3.1",
+]
+
+[project.scripts]
+bean-clerk = "beanclerk.cli:cli"
+
+[tool.bandit.assert_used]
+skips = ["*/test_*.py"]
