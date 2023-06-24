@@ -1,5 +1,7 @@
 # Beanclerk
 
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/peberanek/beanclerk/main.svg)](https://results.pre-commit.ci/latest/github/peberanek/beanclerk/main)
+
 Additional automation for [Beancount](https://github.com/beancount/beancount)
 
 ## Contributing
