@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beanclerk"
+version = "0.0.1"
+authors = [
+  { name = "Petr Beranek", email = "petrberanek.mail@gmail.com" },
+]
+license = {file = "LICENSE"}
+description = "Additional automation for Beancount"
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["accounting", "finance", "beancount", "automation", "API"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Information Technology",
+  "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Office/Business :: Financial :: Accounting",
+]
+dependencies = [
+  "beancount>=2.3.5,<3",
+]
