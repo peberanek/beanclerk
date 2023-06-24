@@ -10,3 +10,10 @@ Set up a development environment:
 source venv/bin/activate
 pre-commit install  # https://pre-commit.com/
 ```
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+
+Run tests:
+```bash
+pytest
+```
