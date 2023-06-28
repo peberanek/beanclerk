@@ -11,6 +11,7 @@ from beancount.core.data import Amount, Transaction
 from beancount.core.flags import FLAG_WARNING
 
 from ..bean_helpers import create_posting, create_transaction
+from . import prepare_meta
 
 
 # This will likely become a part of a class implementing the Importer protocol.
@@ -27,14 +28,6 @@ def get_transactions(
 
     txns: list[Transaction] = []
     for txn in fio_banka.get_transactions(data):
-        meta = {}
-        for k, v in txn._asdict().items():  # _asdict() is public method of NamedTuple
-            if (
-                v is not None
-                and v != ""
-                and k not in ("date", "amount", "currency")  # will be in Posting
-            ):
-                meta[k] = str(v)
         txns.append(
             create_transaction(
                 _date=txn.date,
@@ -45,7 +38,27 @@ def get_transactions(
                         units=Amount(txn.amount, txn.currency),
                     ),
                 ],
-                meta=meta,
+                meta=prepare_meta(
+                    {
+                        "transaction_id": txn.transaction_id,
+                        "account_id": txn.account,
+                        "account_name": txn.account_name,
+                        "bank_id": txn.bank_id,
+                        "bank_name": txn.bank_name,
+                        "ks": txn.ks,
+                        "vs": txn.vs,
+                        "ss": txn.ss,
+                        "user_identification": txn.user_identification,
+                        "recipient_message": txn.recipient_message,
+                        "type": txn.type,
+                        "executor": txn.executor,
+                        "specification": txn.specification,
+                        "comment": txn.comment,
+                        "bic": txn.bic,
+                        "order_id": txn.order_id,
+                        "payer_reference": txn.payer_reference,
+                    },
+                ),
             ),
         )
 

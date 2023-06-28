@@ -26,6 +26,8 @@ classifiers = [
 dependencies = [
   "beancount>=2.3.5,<3",
   "fio-banka>=1.0.3,<2",
+  "creditas==1.0.0.*",
+  "lxml>=4.9.2,<5",
 ]
 
 [project.optional-dependencies]
