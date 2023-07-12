@@ -45,7 +45,7 @@ def _get_transactions(token: str, account_id: str, from_date: date) -> bytes:
     return base64.b64decode(data.export)
 
 
-# This will likely become a part of a class implementing the Importer protocol.
+# FIXME: This function has to be turned into a class implementing ApiImporterProtocol.
 def get_transactions(
     token: str,
     account_id: str,
@@ -94,6 +94,8 @@ def get_transactions(
         else:
             ind = "Dbtr"
         details = "./NtryDtls/TxDtls"
+        # TODO: change `transaction_id` to `id` and `recipient_message`
+        #   to `remittance_info`
         meta = prepare_meta(
             {
                 "transaction_id": get_text(entry, "./NtryRef", raise_if_none=True),
