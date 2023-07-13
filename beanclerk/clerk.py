@@ -1,49 +1,60 @@
-"""Clerk operations"""
-import os
+"""Clerk operations
+
+This module servers as a bridge between the importers, the beanclerk command-line
+interface and the Beancount.
+"""
+
+import copy
+import importlib
+from datetime import date
 from pathlib import Path
 
 import yaml
-from voluptuous import All, Coerce, Length, Match, Schema
-from voluptuous.error import MultipleInvalid
-from voluptuous.validators import PathExists
+from beancount.parser import printer
 
-from .utils import ENCODING
+from .exceptions import ConfigError
+from .importers import ApiImporterProtocol
 
 
-def tweak_config(config: dict) -> dict:
-    """Validate config data and convert values to easier-to-use objects."""
-    nonempty_str = All(str, Length(min=1))
-    schema = Schema(
-        {
-            "input_file": All(
-                Coerce(os.path.expanduser),
-                Coerce(os.path.expandvars),
-                Coerce(Path),
-                PathExists(),  # pylint: disable=no-value-for-parameter
-            ),
-            "apis": {
-                "fio_banka": {
-                    "accounts": [
-                        {
-                            "name": nonempty_str,
-                            "token": All(str, Length(min=64, max=64)),
-                            # It seems `msg` param does not work: custom msg
-                            # doesn't show up in the raised error.
-                            "assets": {Match(r"^[A-Z]{3,8}$"): nonempty_str},
-                        }
-                    ],
-                }
-            },
-        },
-        required=True,
-    )
+def _load_config(filepath: Path) -> dict:
     try:
-        return schema(config)
-    except MultipleInvalid as exc:
-        raise ValueError(exc) from exc
+        with filepath.open("r") as file:
+            return yaml.safe_load(file)
+    except (OSError, yaml.YAMLError) as exc:
+        raise ConfigError(str(exc)) from exc
 
 
-def load_config_file(filename: Path) -> dict:
-    """Return config from a YAML file as dict."""
-    with filename.open("r", encoding=ENCODING) as file:
-        return tweak_config(yaml.safe_load(file))
+def _get_importer(account_config: dict) -> ApiImporterProtocol:
+    module, name = account_config["importer"].rsplit(".", 1)
+    # TODO: check cls is a subclass of ApiImporterProtocol; is it possible
+    #   to achieve this using Pydantic?
+    cls = getattr(importlib.import_module(module), name)
+    # HACK: a but ugly, but ATM it seems OK
+    cfg = copy.deepcopy(account_config)
+    for key in ("name", "bean-account", "importer"):
+        cfg.pop(key)
+    return cls(**cfg)
+
+
+def import_transactions(
+    configfile: Path,
+    from_date: date | None,
+    to_date: date | None,
+) -> None:
+    config = _load_config(configfile)
+    for account_config in config["accounts"]:
+        # FIXME: resolve from_date
+        assert from_date is not None, "TBD: from_date is required"  # noqa: S101
+        if to_date is None:
+            # FIXME: fix Ruff warning
+            to_date = date.today()  # noqa: DTZ011
+        importer: ApiImporterProtocol = _get_importer(account_config)
+        txns, balance = importer.fetch_transactions(
+            bean_account=account_config["bean-account"],
+            from_date=from_date,
+            to_date=to_date,
+        )
+        for txn in txns:
+            print(printer.format_entry(txn))  # noqa: T201
+        print()  # noqa: T201
+        print(balance)  # noqa: T201
