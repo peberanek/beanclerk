@@ -10,7 +10,7 @@ from ..conftest import get_dir
 
 @pytest.fixture()
 def _mock__get_transactions(monkeypatch: pytest.MonkeyPatch):
-    def mock__get_transactions(*args, **kwargs) -> bytes:
+    def mock__get_transactions(*args, **kwargs) -> bytes:  # noqa: ARG001
         with (get_dir(__file__) / "banka_creditas_transactions.xml").open("rb") as file:
             return file.read()
 
@@ -30,5 +30,5 @@ def test_get_transactions():
         bean_account=bean_account,
         from_date=date(2023, 1, 1),
     )
-    print(txns)
-    print(balance)
+    print(txns)  # noqa: T201
+    print(balance)  # noqa: T201

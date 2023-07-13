@@ -43,8 +43,11 @@ def import_transactions(
 ) -> None:
     config = _load_config(configfile)
     for account_config in config["accounts"]:
+        # FIXME: resolve from_date
+        assert from_date is not None, "TBD: from_date is required"  # noqa: S101
         if to_date is None:
-            to_date = date.today()
+            # FIXME: fix Ruff warning
+            to_date = date.today()  # noqa: DTZ011
         importer: ApiImporterProtocol = _get_importer(account_config)
         txns, balance = importer.fetch_transactions(
             bean_account=account_config["bean-account"],
@@ -52,6 +55,6 @@ def import_transactions(
             to_date=to_date,
         )
         for txn in txns:
-            print(printer.format_entry(txn))
-        print()
-        print(balance)
+            print(printer.format_entry(txn))  # noqa: T201
+        print()  # noqa: T201
+        print(balance)  # noqa: T201
