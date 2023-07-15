@@ -30,10 +30,11 @@ def cli(ctx: click.Context, config_file: Path) -> None:
     ctx.obj["config_file"] = config_file
 
 
+# TODO: simplify by subclassing click.DateTime?
 class Date(click.ParamType):
-    """A custom date type for click.
+    """A convenience date type for Click.
 
-    click.DateTime is not convenient because it converts a date into a datetime.
+    Converts dates to a date instead of datetime.
     """
 
     name = "date"
@@ -53,8 +54,8 @@ class Date(click.ParamType):
 @click.pass_context
 def import_(
     ctx: click.Context,
-    from_date: click.DateTime,
-    to_date: click.DateTime,
+    from_date: click.DateTime,  # FIXME: use Date() instead
+    to_date: click.DateTime,  # FIXME: use Date() instead
 ) -> None:
     """Import transactions from configured importers."""
     try:

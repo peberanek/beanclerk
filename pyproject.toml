@@ -24,6 +24,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Accounting",
 ]
 # Always sync with additional dependencies for Mypy in pyproject.toml
+# TODO: simplify dep definitions via '~=' syntax
 dependencies = [
   "PyYAML>=6.0,<7",
   "beancount>=2.3.5,<3",
@@ -31,6 +32,8 @@ dependencies = [
   "creditas==1.0.0.*",
   "lxml>=4.9.2,<5",
   "click>=8.1.4,<9",
+  "pydantic>=2.0.3,<3",
+  "pydantic-settings>=2.0.2,<3",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +48,7 @@ bean-clerk = "beanclerk.cli:cli"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+# TODO: Use https://docs.pydantic.dev/dev-v2/integrations/mypy/
 [tool.mypy]
 ignore_missing_imports = true
 
@@ -84,6 +88,7 @@ select = [
   "FLY",  # flynt
   "RUF",  # Ruff-specific rules
 ]
+ignore = ["TRY003"]
 unfixable = [
   # These may break temporarily commented-out code
   "F401",
