@@ -14,12 +14,15 @@ from pydantic_settings import BaseSettings
 
 from .exceptions import ConfigError
 
+# TODO: add note: always return None if a key is missing
+
 
 class AccountConfig(BaseModel):
-    name: str
+    name: str  # TODO: rename to `account`?
     importer: str  # requires complex validation, moved to the `clerk` module
 
     # To support custom importers, each importer is set up via extra keys.
+    # TODO: why explicit allow? To Include extra keys?
     model_config = ConfigDict(extra="allow")
 
     @field_validator("name")
@@ -29,10 +32,27 @@ class AccountConfig(BaseModel):
         return name
 
 
+class MatchCategories(BaseModel):
+    metadata: dict[str, str]
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ReconcilationRule(BaseModel):
+    matches: MatchCategories
+    account: str  # TODO: validate
+    flag: str | None = None  # TODO: validate
+    payee: str | None = None
+    narration: str | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+
 # TODO: Does it make sense to prevent additional arbitrary fields?
 class Config(BaseSettings):
     input_file: Path
     accounts: list[AccountConfig]
+    reconcilation_rules: list[ReconcilationRule] | None = None
 
     model_config = ConfigDict(extra="forbid")
 

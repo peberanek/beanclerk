@@ -1,6 +1,18 @@
 ---
 input_file: "${TEST_DIR}/ledger.beancount"
+
 accounts:
   - name: "Assets:Banks:Fio:Checking"
     importer: "beanclerk.importers.fio_banka.ApiImporter"
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
+
+reconcilation_rules: # optional!
+  - matches:
+      metadata:
+        # any metadata
+        ks: "0558"
+        # type: "" # matches anything
+    account: "Expenses:Todo"
+    flag: "!"
+    payee: "My payee"
+    narration: "My narration"

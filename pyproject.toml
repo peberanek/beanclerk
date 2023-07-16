@@ -24,7 +24,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Accounting",
 ]
 # Always sync with additional dependencies for Mypy in pyproject.toml
-# TODO: simplify dep definitions via '~=' syntax
+# TODO: simplify dep definitions via '~=' syntax; sort
 dependencies = [
   "PyYAML>=6.0,<7",
   "beancount>=2.3.5,<3",
@@ -34,6 +34,7 @@ dependencies = [
   "click>=8.1.4,<9",
   "pydantic>=2.0.3,<3",
   "pydantic-settings>=2.0.2,<3",
+  "rich>=13.4.2,<14",
 ]
 
 [project.optional-dependencies]
