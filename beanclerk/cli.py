@@ -60,7 +60,7 @@ def import_(
     """Import transactions from configured importers."""
     try:
         import_transactions(
-            configfile=ctx.obj["config_file"],
+            config_file=ctx.obj["config_file"],
             from_date=from_date,
             to_date=to_date,
         )

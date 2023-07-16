@@ -1,23 +1,10 @@
 from datetime import date
 from decimal import Decimal
 
-import fio_banka
 import pytest
 from beancount.core.data import Amount, Posting, Transaction
 
 from beanclerk.importers.fio_banka import ApiImporter
-
-from ..conftest import get_dir
-
-
-# Prevent real API calls by autousing this fixture.
-@pytest.fixture(autouse=True)
-def _mock_fio_banka(monkeypatch: pytest.MonkeyPatch):
-    def mock__request(*args, **kwargs) -> str:  # noqa: ARG001
-        with (get_dir(__file__) / "fio_banka_transactions.json").open("r") as file:
-            return file.read()
-
-    monkeypatch.setattr(fio_banka.Account, "_request", mock__request)
 
 
 def test_get_transactions():
