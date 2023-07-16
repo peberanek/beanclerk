@@ -29,6 +29,9 @@ def _load_config(filepath: Path) -> Config:
         raise ConfigError(str(exc)) from exc
 
 
+# TODO: handle exceptions
+
+
 def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
     module, name = account_config.importer.rsplit(".", 1)
     try:
@@ -64,6 +67,16 @@ def _get_last_import_date(directives, account_name: str) -> date | None:
     return None
 
 
+def _txn_id_exists(directives, account_name: str, txn_id: str) -> bool:
+    """Return True if the account has a Transaction with the txn_id in its metadata."""
+    posting: TxnPosting | Directive
+    # postings_by_account returns postings in the same order as in directives
+    for posting in postings_by_account(directives)[account_name]:
+        if isinstance(posting, TxnPosting) and posting.txn.meta.get("id") == txn_id:
+            return True
+    return False
+
+
 def import_transactions(
     config_file: Path,
     from_date: date | None,
@@ -92,6 +105,12 @@ def import_transactions(
             to_date=to_date,
         )
         for txn in txns:
+            if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
+                continue
+
+            # Reconcile
+
+            # Write to the input file
             print(printer.format_entry(txn))  # noqa: T201
         print()  # noqa: T201
         print(balance)  # noqa: T201
