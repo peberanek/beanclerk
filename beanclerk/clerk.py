@@ -8,26 +8,14 @@ import importlib
 from datetime import date
 from pathlib import Path
 
-import yaml
 from beancount.core.data import Directive, Transaction, TxnPosting
 from beancount.core.realization import postings_by_account
 from beancount.loader import load_file
 from beancount.parser import printer
-from pydantic import ValidationError
 
-from .config import AccountConfig, Config
+from .config import AccountConfig, load_config
 from .exceptions import ClerkError, ConfigError
 from .importers import ApiImporterProtocol
-
-
-# TODO: move into config.py?
-def _load_config(filepath: Path) -> Config:
-    try:
-        with filepath.open("r") as file:
-            return Config.model_validate(yaml.safe_load(file))
-    except (OSError, yaml.YAMLError, ValidationError) as exc:
-        raise ConfigError(str(exc)) from exc
-
 
 # TODO: handle exceptions
 
@@ -82,7 +70,7 @@ def import_transactions(
     from_date: date | None,
     to_date: date | None,
 ) -> None:
-    config = _load_config(config_file)
+    config = load_config(config_file)
     directives, errors, _ = load_file(config.input_file)
     if errors != []:
         raise ClerkError(f"Errors in the Beancount input file: {errors}")

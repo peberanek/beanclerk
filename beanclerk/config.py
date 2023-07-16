@@ -7,9 +7,12 @@
 import os
 from pathlib import Path
 
+import yaml
 from beancount.core.account import is_valid
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 from pydantic_settings import BaseSettings
+
+from .exceptions import ConfigError
 
 
 class AccountConfig(BaseModel):
@@ -42,3 +45,11 @@ class Config(BaseSettings):
         if not input_file.exists():
             raise ValueError(f"Input file '{input_file}' does not exist")
         return input_file
+
+
+def load_config(filepath: Path) -> Config:
+    try:
+        with filepath.open("r") as file:
+            return Config.model_validate(yaml.safe_load(file))
+    except (OSError, yaml.YAMLError, ValidationError) as exc:
+        raise ConfigError(str(exc)) from exc
