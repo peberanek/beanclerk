@@ -37,7 +37,7 @@ def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
             f"'{account_config.importer}' is not a subclass of ApiImporterProtocol",
         )
     try:
-        return cls(**account_config.__pydantic_extra__)
+        return cls(**account_config.model_extra)
     except (TypeError, ValueError) as exc:
         raise ConfigError(str(exc)) from exc
 
