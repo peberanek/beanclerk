@@ -5,13 +5,15 @@ import pytest
 import beanclerk.importers.banka_creditas
 from beanclerk.importers.banka_creditas import get_transactions
 
-from ..conftest import get_dir
+from ..conftest import TOP_DIR
 
 
 @pytest.fixture()
 def _mock__get_transactions(monkeypatch: pytest.MonkeyPatch):
     def mock__get_transactions(*args, **kwargs) -> bytes:  # noqa: ARG001
-        with (get_dir(__file__) / "banka_creditas_transactions.xml").open("rb") as file:
+        with (TOP_DIR / "importers" / "banka_creditas_transactions.xml").open(
+            "rb",
+        ) as file:
             return file.read()
 
     monkeypatch.setattr(

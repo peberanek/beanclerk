@@ -1,11 +1,18 @@
-# Configuration file for beanclerk in YAML format.
 ---
-# vars: ad-hoc variables (YAML anchors) that can be used in other settings
-input-file: "~/Documents/Beancount/ledger.beancount" # path to the Beancount input file
+input_file: "${TEST_DIR}/ledger.beancount"
+
 accounts:
-  - name: "fio.checking" # a unique name for the account
-    importer: "beanclerk.importers.fio_banka.ApiImporter" # importer class
-    bean-account: "Assets:Banks:Checking" # related Beancount account
-    # Fio banka Importer specific settings
-    token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG" # Fio banka API token
-# reconcilation-rules: rules for automatic reconciliation
+  - name: "Assets:Banks:Fio:Checking"
+    importer: "beanclerk.importers.fio_banka.ApiImporter"
+    token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
+
+reconcilation_rules: # optional!
+  - matches:
+      metadata:
+        # any metadata
+        # ks: "0558"
+        type: "" # matches anything
+    account: "Expenses:Todo"
+    flag: "!"
+    payee: "My payee"
+    narration: "My narration"

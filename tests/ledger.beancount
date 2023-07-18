@@ -1,0 +1,7 @@
+2023-01-01 open Assets:Banks:Fio:Checking CZK
+2023-01-01 open Equity:Opening-Balances CZK
+2023-01-01 open Expenses:Food CZK
+
+2023-01-01 * "Opening Balances"
+  Assets:Banks:Fio:Checking                  1000.99 CZK
+  Equity:Opening-Balances                   -1000.99 CZK
