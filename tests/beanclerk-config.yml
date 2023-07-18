@@ -10,8 +10,8 @@ reconcilation_rules: # optional!
   - matches:
       metadata:
         # any metadata
-        ks: "0558"
-        # type: "" # matches anything
+        # ks: "0558"
+        type: "" # matches anything
     account: "Expenses:Todo"
     flag: "!"
     payee: "My payee"

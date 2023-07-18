@@ -11,9 +11,8 @@ from datetime import date
 from pathlib import Path
 
 from beancount.core.data import Amount, Directive, Transaction, TxnPosting
-from beancount.core.realization import postings_by_account
+from beancount.core.realization import compute_postings_balance, postings_by_account
 from beancount.loader import load_file
-from beancount.parser import printer
 from beancount.parser.printer import print_entry
 from rich import print as rprint
 from rich.prompt import Prompt
@@ -71,6 +70,13 @@ def _txn_id_exists(directives, account_name: str, txn_id: str) -> bool:
         if isinstance(posting, TxnPosting) and posting.txn.meta.get("id") == txn_id:
             return True
     return False
+
+
+def _get_balance(directives, account_name: str, currency: str) -> Amount:
+    """Return the balance of the account."""
+    return compute_postings_balance(
+        postings_by_account(directives)[account_name],
+    ).get_currency_units(currency)
 
 
 def _find_reconcilation_rule(
@@ -176,6 +182,7 @@ def import_transactions(
     directives, errors, _ = load_file(config.input_file)
     if errors != []:
         raise ClerkError(f"Errors in the Beancount input file: {errors}")
+
     for account_config in config.accounts:
         if from_date is None:
             last_date = _get_last_import_date(directives, account_config.name)
@@ -187,19 +194,35 @@ def import_transactions(
         if to_date is None:
             # Beancount does not work with times, `date.today()` should be OK.
             to_date = date.today()  # noqa: DTZ011
+
         importer: ApiImporterProtocol = _get_importer(account_config)
         txns, balance = importer.fetch_transactions(
             bean_account=account_config.name,
             from_date=from_date,
             to_date=to_date,
         )
+
+        num_new_txns = 0
         for txn in txns:
             if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
                 continue
             txn = _reconcile(txn, config, config_file)  # noqa: PLW2901
             _append_to_file(config.input_file, txn)
 
-            # Write to the input file
-            print(printer.format_entry(txn))  # noqa: T201
-        print()  # noqa: T201
-        print(balance)  # noqa: T201
+            # HACK: A quick and dirty way to get a complete list of transactions
+            # without (potentially expensive) reloading and checking the whole
+            # imput file again. Directives become unsorted and unbalanced, but
+            # for a simple balance check it should be OK.
+            directives.append(txn)
+
+            num_new_txns += 1
+
+        diff = (
+            balance.number
+            - _get_balance(directives, account_config.name, balance.currency).number
+        )
+        if diff == 0:
+            balance_status = f"OK: {balance}"
+        else:
+            balance_status = f"NOT OK: {balance} (diff: {diff})"
+        rprint(f"New transactions: {num_new_txns}, balance {balance_status}")

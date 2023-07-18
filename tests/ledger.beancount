@@ -3,10 +3,5 @@
 2023-01-01 open Expenses:Food CZK
 
 2023-01-01 * "Opening Balances"
-  Assets:Banks:Fio:Checking                  10000.00 CZK
-  Equity:Opening-Balances                   -10000.00 CZK
-
-2023-01-02 * "Food"
-  id: "10000000000"
-  Assets:Banks:Fio:Checking                 -1000.00 CZK
-  Expenses:Food                              1000.00 CZK
+  Assets:Banks:Fio:Checking                  1000.99 CZK
+  Equity:Opening-Balances                   -1000.99 CZK
