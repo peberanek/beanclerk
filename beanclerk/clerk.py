@@ -14,6 +14,7 @@ from beancount.core.data import Amount, Directive, Transaction, TxnPosting
 from beancount.core.realization import postings_by_account
 from beancount.loader import load_file
 from beancount.parser import printer
+from beancount.parser.printer import print_entry
 from rich import print as rprint
 from rich.prompt import Prompt
 
@@ -24,6 +25,7 @@ from .importers import ApiImporterProtocol
 
 # TODO: handle exceptions
 # TODO: make sure txn has id in its metadata
+# TODO: Python docs recommend to use utf-8 encoding for reading and writing files
 
 
 def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
@@ -154,6 +156,17 @@ def _reconcile(
     return txn
 
 
+def _append_to_file(filepath: Path, directive: Directive) -> None:
+    """Append a Beancount directive to a file."""
+    with filepath.open("r") as f:
+        lines = f.readlines()
+        last_line = lines[-1] if lines else ""
+    with filepath.open("a") as f:
+        if not last_line.endswith("\n"):
+            f.write("\n")
+        print_entry(directive, file=f)
+
+
 def import_transactions(
     config_file: Path,
     from_date: date | None,
@@ -184,6 +197,7 @@ def import_transactions(
             if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
                 continue
             txn = _reconcile(txn, config, config_file)  # noqa: PLW2901
+            _append_to_file(config.input_file, txn)
 
             # Write to the input file
             print(printer.format_entry(txn))  # noqa: T201
