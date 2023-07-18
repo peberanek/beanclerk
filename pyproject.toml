@@ -4,17 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beanclerk"
-version = "0.0.2"
+version = "0.0.3"
 authors = [
   { name = "Petr Beranek", email = "petrberanek.mail@gmail.com" },
 ]
 license = {file = "LICENSE"}
-description = "Additional automation for Beancount"
+description = "Automation for Beancount"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["accounting", "finance", "beancount", "automation", "API"]
 classifiers = [
-  "Development Status :: 2 - Pre-Alpha",
+  "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: End Users/Desktop",
   "Intended Audience :: Information Technology",
