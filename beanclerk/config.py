@@ -6,6 +6,7 @@
 
 import os
 from pathlib import Path
+from typing import Any
 
 import yaml
 from beancount.core.account import is_valid
@@ -50,6 +51,7 @@ class ReconcilationRule(BaseModel):
 
 # TODO: Does it make sense to prevent additional arbitrary fields?
 class Config(BaseSettings):
+    vars: Any = None  # noqa: A003
     input_file: Path
     accounts: list[AccountConfig]
     reconcilation_rules: list[ReconcilationRule] | None = None

@@ -1,9 +1,12 @@
 ---
+vars: # optional
+  name: &fio_importer "beanclerk.importers.fio_banka.ApiImporter" # YAML anchor
+
 input_file: "${TEST_DIR}/ledger.beancount"
 
 accounts:
   - name: "Assets:Banks:Fio:Checking"
-    importer: "beanclerk.importers.fio_banka.ApiImporter"
+    importer: *fio_importer # YAML alias
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
 reconcilation_rules: # optional!
