@@ -10,14 +10,14 @@ import re
 from datetime import date
 from pathlib import Path
 
-from beancount.core.data import Amount, Directive, Transaction, TxnPosting
+from beancount.core.data import Amount, Custom, Directive, Transaction, TxnPosting
 from beancount.core.realization import compute_postings_balance, postings_by_account
 from beancount.loader import load_file
-from beancount.parser.printer import print_entry
+from beancount.parser.printer import format_entry
 from rich import print as rprint
 from rich.prompt import Prompt
 
-from .bean_helpers import create_posting, create_transaction
+from .bean_helpers import create_posting, create_transaction, filter_directives
 from .config import AccountConfig, Config, ReconcilationRule, load_config
 from .exceptions import ClerkError, ConfigError
 from .importers import ApiImporterProtocol
@@ -25,6 +25,8 @@ from .importers import ApiImporterProtocol
 # TODO: handle exceptions
 # TODO: make sure txn has id in its metadata
 # TODO: Python docs recommend to use utf-8 encoding for reading and writing files
+# TODO: change 'directive' back to 'entry': id does more sense in the context of
+#   Beancount V2
 
 
 def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
@@ -52,6 +54,7 @@ def _get_last_import_date(directives, account_name: str) -> date | None:
     txns = []
     posting: TxnPosting | Directive
     # postings_by_account returns postings in the same order as in directives
+    # TODO: use bean_helpers.filter_directives
     for posting in postings_by_account(directives)[account_name]:
         if isinstance(posting, TxnPosting):
             txns.append(posting.txn)
@@ -162,15 +165,27 @@ def _reconcile(
     return txn
 
 
-def _append_to_file(filepath: Path, directive: Directive) -> None:
-    """Append a Beancount directive to a file."""
+def _insert_directive(filepath: Path, directive: Directive, lineno: int) -> None:
     with filepath.open("r") as f:
         lines = f.readlines()
-        last_line = lines[-1] if lines else ""
-    with filepath.open("a") as f:
-        if not last_line.endswith("\n"):
-            f.write("\n")
-        print_entry(directive, file=f)
+    # `lineno -1`: line numbers start from 1, list indices from 0
+    lines.insert(lineno - 1, format_entry(directive) + "\n")
+    with filepath.open("w") as f:
+        f.writelines(lines)
+
+
+# function to find Beancount 'custom' directive named 'beanclerk-mark'
+def _get_mark_lineno(directives: list[Directive], name: str) -> int:
+    custom_dirs = filter_directives(directives, Custom)
+    # TODO: make sure marks are unique
+    for custom_dir in custom_dirs:
+        if custom_dir.type == "beanclerk-mark":
+            for value_type in custom_dir.values:
+                if value_type.value == name:
+                    return custom_dir.meta["lineno"]
+    # TODO: it would be great to check this before importing transactions
+    #   (e.g. during config validation)
+    raise ClerkError(f"Beanclerk mark '{name}' not found")
 
 
 def import_transactions(
@@ -207,7 +222,11 @@ def import_transactions(
             if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
                 continue
             txn = _reconcile(txn, config, config_file)  # noqa: PLW2901
-            _append_to_file(config.input_file, txn)
+            _insert_directive(
+                config.input_file,
+                txn,
+                _get_mark_lineno(directives, account_config.name),
+            )
 
             # HACK: A quick and dirty way to get a complete list of transactions
             # without (potentially expensive) reloading and checking the whole

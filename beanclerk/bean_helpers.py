@@ -55,3 +55,10 @@ def create_posting(
         flag=flag,
         meta=meta if meta is not None else {},
     )
+
+
+def filter_directives(directives, _type):
+    """Yield only directives of the given type."""
+    for directive in directives:
+        if isinstance(directive, _type):
+            yield directive
