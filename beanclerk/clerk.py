@@ -165,6 +165,10 @@ def _reconcile(
     return txn
 
 
+# XXX: if file changes during import, the line numbers will be wrong. How this is
+#   handled by Fava?
+#   potentially useful stuff:
+#   * beancount.loader.needs_refresh
 def _insert_directive(filepath: Path, directive: Directive, lineno: int) -> None:
     with filepath.open("r") as f:
         lines = f.readlines()
@@ -183,8 +187,8 @@ def _get_mark_lineno(directives: list[Directive], name: str) -> int:
             for value_type in custom_dir.values:
                 if value_type.value == name:
                     return custom_dir.meta["lineno"]
-    # TODO: it would be great to check this before importing transactions
-    #   (e.g. during config validation)
+    # TODO: it would be great to check this before importing transactions.
+    #   Via load_file(extra_validation) or something like that?
     raise ClerkError(f"Beanclerk mark '{name}' not found")
 
 
