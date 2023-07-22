@@ -6,5 +6,6 @@
   Assets:Banks:Fio:Checking                  1000.99 CZK
   Equity:Opening-Balances                   -1000.99 CZK
 
-
 2023-01-01 custom "beanclerk-mark" Assets:Banks:Fio:Checking
+
+2023-01-01 custom "beanclerk-mark" Assets:Banks:Fio:Savings

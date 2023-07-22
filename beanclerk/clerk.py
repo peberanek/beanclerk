@@ -10,14 +10,14 @@ import re
 from datetime import date
 from pathlib import Path
 
-from beancount.core.data import Amount, Custom, Directive, Transaction, TxnPosting
+from beancount.core.data import Amount, Directive, Transaction, TxnPosting
 from beancount.core.realization import compute_postings_balance, postings_by_account
 from beancount.loader import load_file
 from beancount.parser.printer import format_entry
 from rich import print as rprint
 from rich.prompt import Prompt
 
-from .bean_helpers import create_posting, create_transaction, filter_directives
+from .bean_helpers import create_posting, create_transaction
 from .config import AccountConfig, Config, ReconcilationRule, load_config
 from .exceptions import ClerkError, ConfigError
 from .importers import ApiImporterProtocol
@@ -45,11 +45,13 @@ def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
         raise ConfigError(str(exc)) from exc
 
 
-def _get_last_import_date(directives, account_name: str) -> date | None:
+def _get_last_import_date(directives, account_name: str) -> date:
     """Return the date of the last imported Transaction for the given account.
 
     An imported transaction is a Transaction with the `id` key in its metadata.
     Directives must be properly ordered.
+
+    Raises ClerkError if no Transaction with the `id` key is found.
     """
     txns = []
     posting: TxnPosting | Directive
@@ -62,7 +64,9 @@ def _get_last_import_date(directives, account_name: str) -> date | None:
     for txn in reversed(txns):
         if txn.meta.get("id") is not None:
             return txn.date
-    return None
+    raise ClerkError(
+        "Cannot determine last import date, use --from-date option",
+    )
 
 
 def _txn_id_exists(directives, account_name: str, txn_id: str) -> bool:
@@ -125,7 +129,7 @@ def _find_reconcilation_rule(
 
 # FIXME: this fx claims to always return a new Txn
 def _reconcile(
-    txn: Transaction,
+    txns: list[Transaction],
     config: Config,
     config_file: Path,
 ) -> Transaction:
@@ -142,54 +146,62 @@ def _reconcile(
     Side effects:
     * May modify config.reconcilation_rules, if the user chooses to reload them.
     """
-    rule = _find_reconcilation_rule(txn, config, config_file)
-    # Transaction is immutable, so we need to create a new one
-    if rule is not None:
-        units = txn.postings[0].units
-        # TODO: ensure txn has only 1 posting
-        postings = copy.deepcopy(txn.postings)
-        postings.append(
-            create_posting(
-                account=rule.account,
-                units=Amount(-units.number, units.currency),
-            ),
-        )
-        return create_transaction(
-            _date=txn.date,
-            flag=rule.flag if rule.flag is not None else txn.flag,
-            payee=rule.payee if rule.payee is not None else txn.payee,
-            narration=rule.narration if rule.narration is not None else txn.narration,
-            meta=txn.meta,
-            postings=postings,
-        )
-    return txn
+    reconciled_txns = []
+    for txn in txns:
+        rule = _find_reconcilation_rule(txn, config, config_file)
+        if rule is None:
+            reconciled_txns.append(txn)
+        else:
+            # Transaction is immutable, so we need to create a new one
+            units = txn.postings[0].units
+            # TODO: ensure txn has only 1 posting
+            postings = copy.deepcopy(txn.postings)
+            postings.append(
+                create_posting(
+                    account=rule.account,
+                    units=Amount(-units.number, units.currency),
+                ),
+            )
+            reconciled_txns.append(
+                create_transaction(
+                    _date=txn.date,
+                    flag=rule.flag if rule.flag is not None else txn.flag,
+                    payee=rule.payee if rule.payee is not None else txn.payee,
+                    narration=rule.narration
+                    if rule.narration is not None
+                    else txn.narration,
+                    meta=txn.meta,
+                    postings=postings,
+                ),
+            )
+    return reconciled_txns
 
 
-# XXX: if file changes during import, the line numbers will be wrong. How this is
-#   handled by Fava?
-#   potentially useful stuff:
-#   * beancount.loader.needs_refresh
-def _insert_directive(filepath: Path, directive: Directive, lineno: int) -> None:
+def _insert_directives(
+    directives: list[Directive],
+    filepath: Path,
+    lineno: int,
+) -> None:
+    string = ""
+    for d in directives:
+        string += format_entry(d) + "\n"
     with filepath.open("r") as f:
         lines = f.readlines()
-    # `lineno -1`: line numbers start from 1, list indices from 0
-    lines.insert(lineno - 1, format_entry(directive) + "\n")
+    lines.insert(lineno - 1, string)  # indices start from 0 (line nums from 1)
     with filepath.open("w") as f:
         f.writelines(lines)
 
 
-# function to find Beancount 'custom' directive named 'beanclerk-mark'
-def _get_mark_lineno(directives: list[Directive], name: str) -> int:
-    custom_dirs = filter_directives(directives, Custom)
-    # TODO: make sure marks are unique
-    for custom_dir in custom_dirs:
-        if custom_dir.type == "beanclerk-mark":
-            for value_type in custom_dir.values:
-                if value_type.value == name:
-                    return custom_dir.meta["lineno"]
-    # TODO: it would be great to check this before importing transactions.
-    #   Via load_file(extra_validation) or something like that?
-    raise ClerkError(f"Beanclerk mark '{name}' not found")
+# It does not make sense to reload the input file every time the mark lineno
+# is needed. Using a regex is more efficient.
+def _get_mark_lineno(filepath: Path, mark_name: str) -> int:
+    with filepath.open("r") as f:
+        lines = f.readlines()
+    mark = re.compile(r'^\d{4}-\d{2}-\d{2} custom "beanclerk-mark" ' + mark_name + "$")
+    for i, line in enumerate(lines):
+        if mark.match(line):
+            return i + 1
+    raise ClerkError(f"Beanclerk mark '{mark_name}' not found")
 
 
 def import_transactions(
@@ -198,22 +210,24 @@ def import_transactions(
     to_date: date | None,
 ) -> None:
     config = load_config(config_file)
-    directives, errors, _ = load_file(config.input_file)
-    if errors != []:
-        raise ClerkError(f"Errors in the Beancount input file: {errors}")
-
     for account_config in config.accounts:
+        # Inserting new directives into the input file is tricky. If the file
+        # is changed between the time we load it and the time we write to it,
+        # the line numbers will be wrong.
+        #
+        # Reloading the input file on each iteration makes sure lineno of each
+        # directive is correct. This is necessary for a correct insertion of
+        # new directives.
+        #
+        # There is no check for errors here, because txns from a previous iteration
+        # might be imported unbalanced or incomplete if the user chooses so.
+        directives, _, _ = load_file(config.input_file)
+
         if from_date is None:
-            last_date = _get_last_import_date(directives, account_config.name)
-            if last_date is None:
-                raise ClerkError(
-                    "Cannot determine last import date, use --from-date option",
-                )
-            from_date = last_date
+            from_date = _get_last_import_date(directives, account_config.name)
         if to_date is None:
             # Beancount does not work with times, `date.today()` should be OK.
             to_date = date.today()  # noqa: DTZ011
-
         importer: ApiImporterProtocol = _get_importer(account_config)
         txns, balance = importer.fetch_transactions(
             bean_account=account_config.name,
@@ -221,25 +235,31 @@ def import_transactions(
             to_date=to_date,
         )
 
-        num_new_txns = 0
-        for txn in txns:
-            if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
-                continue
-            txn = _reconcile(txn, config, config_file)  # noqa: PLW2901
-            _insert_directive(
-                config.input_file,
-                txn,
-                _get_mark_lineno(directives, account_config.name),
-            )
+        new_txns = [
+            txn
+            for txn in txns
+            if not _txn_id_exists(directives, account_config.name, txn.meta["id"])
+        ]
+<<<<<<< HEAD
+        new_txns = _reconcile(new_txns, config, config_file)
+        directives, _, _ = load_file(config.input_file)  # FIXME: Inefficient
+        _insert_directives(
+=======
+        new_txns = _reconcile(new_txns, config)
+        _insert_directives(  # type: ignore[reportUnusedExpression]
+>>>>>>> ca5bf5d (wip: fix lineno)
+            new_txns,
+            config.input_file,
+            _get_mark_lineno(config.input_file, account_config.name),
+        )
 
-            # HACK: A quick and dirty way to get a complete list of transactions
-            # without (potentially expensive) reloading and checking the whole
-            # imput file again. Directives become unsorted and unbalanced, but
-            # for a simple balance check it should be OK.
-            directives.append(txn)
+        # HACK: Update the list of directives without reloading the whole file
+        #   (it may be a quite expensive operation with Beancount V2).
+        #   Directives become unsorted and potentially unbalanced, but for
+        #   a simple balance check it should be OK.
+        directives.extend(new_txns)
 
-            num_new_txns += 1
-
+        # TODO: refactor into a separate function
         diff = (
             balance.number
             - _get_balance(directives, account_config.name, balance.currency).number
@@ -248,4 +268,4 @@ def import_transactions(
             balance_status = f"OK: {balance}"
         else:
             balance_status = f"NOT OK: {balance} (diff: {diff})"
-        rprint(f"New transactions: {num_new_txns}, balance {balance_status}")
+        rprint(f"New transactions: {len(new_txns)}, balance {balance_status}")
