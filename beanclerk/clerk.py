@@ -89,7 +89,6 @@ def _get_balance(directives, account_name: str, currency: str) -> Amount:
 def _find_reconcilation_rule(
     txn: Transaction,
     config: Config,
-    config_file: Path,
 ) -> ReconcilationRule | None:
     while True:
         if config.reconcilation_rules:
@@ -117,7 +116,7 @@ def _find_reconcilation_rule(
                 # parts of the config may cause unexpected issues down
                 # the road.
                 config.reconcilation_rules = load_config(
-                    config_file,
+                    config.config_file,
                 ).reconcilation_rules
                 continue
             case "i":
@@ -131,7 +130,6 @@ def _find_reconcilation_rule(
 def _reconcile(
     txns: list[Transaction],
     config: Config,
-    config_file: Path,
 ) -> Transaction:
     """Return a new reconciled Transaction.
 
@@ -148,7 +146,7 @@ def _reconcile(
     """
     reconciled_txns = []
     for txn in txns:
-        rule = _find_reconcilation_rule(txn, config, config_file)
+        rule = _find_reconcilation_rule(txn, config)
         if rule is None:
             reconciled_txns.append(txn)
         else:
@@ -240,14 +238,8 @@ def import_transactions(
             for txn in txns
             if not _txn_id_exists(directives, account_config.name, txn.meta["id"])
         ]
-<<<<<<< HEAD
-        new_txns = _reconcile(new_txns, config, config_file)
-        directives, _, _ = load_file(config.input_file)  # FIXME: Inefficient
-        _insert_directives(
-=======
         new_txns = _reconcile(new_txns, config)
         _insert_directives(  # type: ignore[reportUnusedExpression]
->>>>>>> ca5bf5d (wip: fix lineno)
             new_txns,
             config.input_file,
             _get_mark_lineno(config.input_file, account_config.name),

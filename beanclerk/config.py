@@ -56,6 +56,9 @@ class Config(BaseSettings):
     accounts: list[AccountConfig]
     reconcilation_rules: list[ReconcilationRule] | None = None
 
+    # additional fields (not present in the config file)
+    config_file: Path
+
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("input_file")
@@ -72,6 +75,8 @@ class Config(BaseSettings):
 def load_config(filepath: Path) -> Config:
     try:
         with filepath.open("r") as file:
-            return Config.model_validate(yaml.safe_load(file))
+            contents = yaml.safe_load(file)
+            contents["config_file"] = filepath
+            return Config.model_validate(contents)
     except (OSError, yaml.YAMLError, ValidationError) as exc:
         raise ConfigError(str(exc)) from exc
