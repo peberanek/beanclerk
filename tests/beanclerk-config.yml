@@ -1,24 +1,27 @@
 ---
 vars: # optional
-  name: &fio_importer "beanclerk.importers.fio_banka.ApiImporter" # YAML anchor
+  fio_importer: &fio_importer "beanclerk.importers.fio_banka.ApiImporter" # YAML anchor
 
+# Beancount ledger, path may be relative or absolute, may include ~ or env vars.
 input_file: "${TEST_DIR}/ledger.beancount"
 
 accounts:
   - name: "Assets:Banks:Fio:Checking"
     importer: *fio_importer # YAML alias
-    token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
+    # `name` and `importer` are required, `token` is an importer-specific setting
+    token: "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF"
   - name: "Assets:Banks:Fio:Savings"
     importer: *fio_importer # YAML alias
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
-reconcilation_rules: # optional!
+reconcilation_rules: # optional
+  # 1 example rule
   - matches:
       metadata:
-        # any metadata
-        ks: "0558"
+        # any metadata that a particular importer might set
+        ks: "0558" # an importer-specific metadata
         # type: "" # matches anything
-    account: "Expenses:Todo"
-    flag: "!"
-    payee: "My payee"
-    narration: "My narration"
+    account: "Expenses:Todo" # the other leg of any matching transaction
+    flag: "!" # optional
+    payee: "My payee" # optional
+    narration: "My narration" # optional
