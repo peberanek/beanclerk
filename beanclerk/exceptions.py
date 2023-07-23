@@ -1,4 +1,4 @@
-"""Custom exceptions for Beanclerk"""
+"""Custom exceptions"""
 
 
 class BeanclerkError(Exception):
