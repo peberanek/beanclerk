@@ -6,6 +6,8 @@ from beancount.core.data import Amount, Posting, Transaction
 
 from beanclerk.importers.fio_banka import ApiImporter
 
+pytestmark = pytest.mark.usefixtures("_mock_fio_banka")
+
 
 def test_get_transactions():
     bean_account = "Assets:Account"

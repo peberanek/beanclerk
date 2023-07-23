@@ -1,13 +1,20 @@
 """Clerk operations
 
-This module servers as a bridge between the importers, the beanclerk command-line
-interface and the Beancount.
+This module provides operations consumed by the CLI.
+
+TODO:
+    * handle exceptions
+    * Python docs recommend to use utf-8 encoding for reading and writing files
+    * validate txns coming from importers:
+        * check that txns have only 1 posting
+        * check that txns have id in their metadata
+    * Test fn append_entry_to_file.
 """
 
 import copy
-import importlib
 import re
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from beancount.core.data import Amount, Directive, Transaction, TxnPosting
@@ -17,99 +24,149 @@ from beancount.parser.printer import format_entry
 from rich import print as rprint
 from rich.prompt import Prompt
 
-from .bean_helpers import create_posting, create_transaction
-from .config import AccountConfig, Config, ReconcilationRule, load_config
-from .exceptions import ClerkError, ConfigError
+from .bean_helpers import (
+    check_account_name,
+    create_posting,
+    create_transaction,
+    filter_entries,
+)
+from .config import Config, ReconcilationRule, load_config, load_importer
+from .exceptions import ClerkError
 from .importers import ApiImporterProtocol
 
-# TODO: handle exceptions
-# TODO: make sure txn has id in its metadata
-# TODO: Python docs recommend to use utf-8 encoding for reading and writing files
-# TODO: change 'directive' back to 'entry': id does more sense in the context of
-#   Beancount V2
 
+def find_last_import_date(entries: list[Directive], account_name: str) -> date | None:
+    """Return date of the last imported transaction, or None if not found.
 
-def _get_importer(account_config: AccountConfig) -> ApiImporterProtocol:
-    module, name = account_config.importer.rsplit(".", 1)
-    try:
-        cls = getattr(importlib.import_module(module), name)
-    except (ImportError, AttributeError) as exc:
-        raise ConfigError(f"Cannot import '{account_config.importer}'") from exc
-    if not issubclass(cls, ApiImporterProtocol):
-        raise ConfigError(
-            f"'{account_config.importer}' is not a subclass of ApiImporterProtocol",
-        )
-    try:
-        return cls(**account_config.model_extra)
-    except (TypeError, ValueError) as exc:
-        raise ConfigError(str(exc)) from exc
+    This function searches for the latest transaction with `id` key in its
+    metadata. Entries must be properly ordered.
 
+    Args:
+        entries (list[Directive]): a list of Beancount directives
+        account_name (str): Beancount account name
 
-def _get_last_import_date(directives, account_name: str) -> date:
-    """Return the date of the last imported Transaction for the given account.
+    Raises:
+        ValueError: if account_name is not a valid Beancount account name
 
-    An imported transaction is a Transaction with the `id` key in its metadata.
-    Directives must be properly ordered.
-
-    Raises ClerkError if no Transaction with the `id` key is found.
+    Returns:
+        date | None
     """
-    txns = []
-    posting: TxnPosting | Directive
-    # postings_by_account returns postings in the same order as in directives
-    # TODO: use bean_helpers.filter_directives
-    for posting in postings_by_account(directives)[account_name]:
-        if isinstance(posting, TxnPosting):
-            txns.append(posting.txn)
-    txn: Transaction
-    for txn in reversed(txns):
-        if txn.meta.get("id") is not None:
-            return txn.date
-    raise ClerkError(
-        "Cannot determine last import date, use --from-date option",
+    check_account_name(account_name)
+    txn_postings = filter_entries(
+        postings_by_account(entries)[account_name],
+        TxnPosting,
     )
+    for txn_posting in reversed(list(txn_postings)):  # latest first
+        if txn_posting.txn.meta.get("id") is not None:
+            return txn_posting.txn.date
+    return None
 
 
-def _txn_id_exists(directives, account_name: str, txn_id: str) -> bool:
-    """Return True if the account has a Transaction with the txn_id in its metadata."""
-    posting: TxnPosting | Directive
-    # postings_by_account returns postings in the same order as in directives
-    for posting in postings_by_account(directives)[account_name]:
-        if isinstance(posting, TxnPosting) and posting.txn.meta.get("id") == txn_id:
-            return True
-    return False
+def transaction_exists(
+    entries: list[Directive],
+    account_name: str,
+    txn_id: str,
+) -> bool:
+    """Return True if the account has a transaction with the given ID.
+
+    Args:
+        entries (list[Directive]): a list of Beancount directives
+        account_name (str): Beancount account name
+        txn_id (str): transaction ID (`id` key in its metadata)
+
+    Raises:
+        ValueError: if account_name is not a valid Beancount account name
+
+    Returns:
+        bool
+    """
+    check_account_name(account_name)
+    txn_postings = filter_entries(
+        postings_by_account(entries)[account_name],
+        TxnPosting,
+    )
+    return any(txn_posting.txn.meta.get("id") == txn_id for txn_posting in txn_postings)
 
 
-def _get_balance(directives, account_name: str, currency: str) -> Amount:
-    """Return the balance of the account."""
+def compute_balance(
+    entries: list[Directive],
+    account_name: str,
+    currency: str,
+) -> Amount:
+    """Return account balance for the given account and currency.
+
+    If the account does not exist, it returns Amount 0.
+
+    Args:
+        entries (list[Directive]): a list of Beancount directives
+        account_name (str): Beancount account name
+        currency (str): currency ISO code (e.g. 'USD')
+
+    Raises:
+        ValueError: if account_name is not a valid Beancount account name
+        ValueError: if currency is not a valid ISO code
+
+    Returns:
+        Amount: account balance
+    """
+    check_account_name(account_name)
+    if not re.match(r"^[A-Z]{3}$", currency):
+        raise ValueError(f"'{currency}' is not a valid currency code")
     return compute_postings_balance(
-        postings_by_account(directives)[account_name],
+        postings_by_account(entries)[account_name],
     ).get_currency_units(currency)
 
 
-def _find_reconcilation_rule(
-    txn: Transaction,
+def find_reconcilation_rule(
+    transaction: Transaction,
     config: Config,
 ) -> ReconcilationRule | None:
+    """Return a reconcilation rule matching the given transaction.
+
+    If no rule matches the transaction, the user is prompted to choose
+    an action to resolve the situation. The user may also choose not
+    to reconcile the transaction and None is returned.
+
+    Args:
+        transaction (Transaction): a Beancount transaction
+        config (Config): Beanclerk config
+
+    Raises:
+        ClerkError: Raised if a reconcilation rule is found to be invalid
+            or an unexpected action is chosen by the user.
+
+    Returns:
+        ReconcilationRule | None: a matching reconcilation rule, or None
+    """
     while True:
         if config.reconcilation_rules:
             for rule in config.reconcilation_rules:
-                # TODO: make sure len(rule.matches.metadata) is not 0
+                if len(rule.matches.metadata) == 0:
+                    raise ClerkError(
+                        f"Reconcilation rule: {rule}\n"
+                        "Sanity check failed: no patterns to match",
+                    )
                 num_matches = 0
                 for key, pattern in rule.matches.metadata.items():
-                    # FIXME: empty string in pattern always matches
+                    if pattern == "":
+                        raise ClerkError(
+                            f"Reconcilation rule: {rule}\n"
+                            'Dangerous pattern "" matches everything. '
+                            'Use ".*" or "^$" instead.',
+                        )
                     if (
-                        key in txn.meta
-                        and re.search(pattern, txn.meta[key]) is not None
+                        key in transaction.meta
+                        and re.search(pattern, transaction.meta[key]) is not None
                     ):
                         num_matches += 1
                 if num_matches == len(rule.matches.metadata):
                     return rule
 
-        rprint("No rule for the following transaction:")
-        rprint(txn)
+        rprint("No reconcilation rule matches the following transaction:")
+        rprint(transaction)
         rprint("Available actions:")
         rprint("'r': reload config (you should add a new rule first)")
-        rprint("'i': import as-is (transaction will be unbalanced)")
+        rprint("'i': import as-is (transaction remains unbalanced)")
         match Prompt.ask("Enter the action", choices=["r", "i"]):
             case "r":
                 # Reload only the reconcilation rules, changing the other
@@ -126,31 +183,39 @@ def _find_reconcilation_rule(
     return None
 
 
-# FIXME: this fx claims to always return a new Txn
-def _reconcile(
-    txn: Transaction,
-    config: Config,
-) -> Transaction:
-    """Return a new reconciled Transaction.
+# FIXME: rename to `categorize` (fix this term in parts of the program as well);
+#   reconcilation is a different process.
+def reconcile(transaction: Transaction, config: Config) -> Transaction:
+    """Return transaction reconciled according to rules set in config.
 
-    Reconcilation means adding a payee, narration and flag (if provided),
-    and making the transaction balanced by adding missing postings.
+    Reconcilation means adding any missing postings (legs) to a transaction
+    to make it balanced. Reconcilation may also fill in a missing payee,
+    narration and transaction flag.
 
     The rules are applied in the order they are defined in the config file.
 
-    Passing config and config_file is needed for reloading the reconcilation
-    rules if the user chooses to do so.
+    The returned transaction is either a new instance (if new data have
+    been added), or the original one if no matching reconcilation rule was
+    found.
+
+    Args:
+        transaction (Transaction): a Beancount transaction
+        config (Config): Beanclerk config
 
     Side effects:
-    * May modify config.reconcilation_rules, if the user chooses to reload them.
+        * `config.reconcilation_rules` may be modified if the user chooses to
+        manually edit and reload the config file during the interactive
+        reconcilation process.
+
+    Returns:
+        Transaction: a Beancount transaction (it may be reconciled, or not)
     """
-    rule = _find_reconcilation_rule(txn, config)
-    if rule is None:  # cannot reconcile
-        return txn
+    rule = find_reconcilation_rule(transaction, config)
+    if rule is None:
+        return transaction
     # Reconcile: Transaction is immutable, so we need to create a new one
-    # TODO: ensure txn has only 1 posting
-    units = txn.postings[0].units
-    postings = copy.deepcopy(txn.postings)
+    units = transaction.postings[0].units
+    postings = copy.deepcopy(transaction.postings)
     postings.append(
         create_posting(
             account=rule.account,
@@ -158,34 +223,53 @@ def _reconcile(
         ),
     )
     return create_transaction(
-        _date=txn.date,
-        flag=rule.flag if rule.flag is not None else txn.flag,
-        payee=rule.payee if rule.payee is not None else txn.payee,
-        narration=rule.narration if rule.narration is not None else txn.narration,
-        meta=txn.meta,
+        _date=transaction.date,
+        flag=rule.flag if rule.flag is not None else transaction.flag,
+        payee=rule.payee if rule.payee is not None else transaction.payee,
+        narration=rule.narration
+        if rule.narration is not None
+        else transaction.narration,
+        meta=transaction.meta,
         postings=postings,
     )
 
 
-def _insert_directive(
-    directive: Directive,
-    filepath: Path,
-    lineno: int,
-) -> None:
+def insert_entry(entry: Directive, filepath: Path, lineno: int) -> None:
+    """Insert an entry into a file.
+
+    Args:
+        entry (Directive): a Beancount directive
+        filepath (Path): a file path
+        lineno (int): line number before which to insert the entry
+    """
     with filepath.open("r") as f:
         lines = f.readlines()
     # indices start from 0 (line nums from 1)
-    lines.insert(lineno - 1, format_entry(directive) + "\n")
+    lines.insert(lineno - 1, format_entry(entry) + "\n")
     with filepath.open("w") as f:
         f.writelines(lines)
 
 
-# It does not make sense to reload the input file every time the mark lineno
-# is needed. Using a regex is more efficient.
-def _get_mark_lineno(filepath: Path, mark_name: str) -> int:
+def find_mark_lineno(filepath: Path, mark_name: str) -> int:
+    """Find the line number of a custom 'beanclerk-mark' directive in a file.
+
+    Args:
+        filepath (Path): a Beancount input file
+        mark_name (str): a mark name, e.g. 'Assets:Bank:MyBank'
+
+    Raises:
+        ClerkError: _description_
+
+    Returns:
+        int: _description_
+    """
+    # Loading a Beancount input file may be quite slow, so reloading it just
+    # to get a lineno of 1 directive is inefficient. Using a simple regex
+    # is faster.
     with filepath.open("r") as f:
         lines = f.readlines()
-    # TODO: efficient definition? A module level variable?
+    # The compiled versions of the most recent patterns passed to `re.compile()`
+    # are cached.
     mark = re.compile(r'^\d{4}-\d{2}-\d{2} custom "beanclerk-mark" ' + mark_name + "$")
     for i, line in enumerate(lines):
         if mark.match(line):
@@ -193,23 +277,62 @@ def _get_mark_lineno(filepath: Path, mark_name: str) -> int:
     raise ClerkError(f"Beanclerk mark '{mark_name}' not found")
 
 
+def print_import_status(
+    new_txns: int,
+    importer_balance: Decimal,
+    bean_balance: Decimal,
+) -> None:
+    """Print import status to stdout.
+
+    Args:
+        new_txns (int): number of imported transactions
+        importer_balance (Decimal): balance reported by the importer
+        bean_balance (Decimal): balance computed from the Beancount input file
+    """
+    diff = importer_balance - bean_balance
+    if diff == 0:
+        balance_status = f"OK: {importer_balance}"
+    else:
+        balance_status = f"NOT OK: {importer_balance} (diff: {diff})"
+    rprint(f"New transactions: {new_txns}, balance {balance_status}")
+
+
 def import_transactions(
     config_file: Path,
     from_date: date | None,
     to_date: date | None,
 ) -> None:
+    """For each configured importer, import transactions and print import status.
+
+    Args:
+        config_file (Path): path to a config file
+        from_date (date | None): the first date to import
+        to_date (date | None): the last date to import
+
+    Raises:
+        ClerkError: raised if there are errors in the input file
+        ClerkError: raised if the initial import date cannot be determined
+    """
+    """For each configured importer, import transactions and print import status."""
     config = load_config(config_file)
-    directives, errors, _ = load_file(config.input_file)
+    entries, errors, _ = load_file(config.input_file)
     if errors != []:
+        # TODO: format errors via beancount.parser.printer.format_errors
         raise ClerkError(f"Errors in the input file: {errors}")
 
     for account_config in config.accounts:
+        rprint(f"Importing transactions for account: '{account_config.name}'")
         if from_date is None:
-            from_date = _get_last_import_date(directives, account_config.name)
+            # TODO: sort entries by date
+            last_date = find_last_import_date(entries, account_config.name)
+            if last_date is None:
+                # TODO: catch and add a note the user should use --from-date option
+                raise ClerkError("Cannot determine the initial import date.")
+            from_date = last_date
         if to_date is None:
             # Beancount does not work with times, `date.today()` should be OK.
             to_date = date.today()  # noqa: DTZ011
-        importer: ApiImporterProtocol = _get_importer(account_config)
+        importer: ApiImporterProtocol = load_importer(account_config)
         txns, balance = importer.fetch_transactions(
             bean_account=account_config.name,
             from_date=from_date,
@@ -218,33 +341,30 @@ def import_transactions(
 
         new_txns = 0
         for txn in txns:
-            if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
+            if transaction_exists(entries, account_config.name, txn.meta["id"]):
                 continue
             new_txns += 1
-            txn = _reconcile(txn, config)  # noqa: PLW2901
+            txn = reconcile(txn, config)  # noqa: PLW2901
 
-            # Inserting new directives into the input file is tricky. If the file
-            # is changed between the time we load it and the time we write to it,
-            # the line numbers will be wrong.
-            _insert_directive(
+            # Inserting entries into the input file is tricky. We cannot rely on
+            # line numbers of entries loaded from the file, because the file may
+            # change between the time we load it and the time we write to it
+            # (typically due to interactive reconcilation). Therefore, the lineno
+            # of a Beanclerk mark has to be updated before each new insertion.
+            insert_entry(
                 txn,
                 config.input_file,
-                _get_mark_lineno(config.input_file, account_config.name),
+                find_mark_lineno(config.input_file, account_config.name),
             )
 
-            # HACK: Update the list of directives without reloading the whole file
-            #   (it may be a quite expensive operation with Beancount V2).
-            #   Directives become unsorted and potentially unbalanced, but for
+            # HACK: Update the list of entries without reloading the whole input
+            #   file (it may be a quite slow with the Beancount v2). This way
+            #   entries become unsorted and potentially unbalanced, but for
             #   a simple balance check it should be OK.
-            directives.append(txn)
+            entries.append(txn)
 
-        # TODO: refactor into a separate function
-        diff = (
-            balance.number
-            - _get_balance(directives, account_config.name, balance.currency).number
+        print_import_status(
+            new_txns,
+            balance.number,
+            compute_balance(entries, account_config.name, balance.currency).number,
         )
-        if diff == 0:
-            balance_status = f"OK: {balance}"
-        else:
-            balance_status = f"NOT OK: {balance} (diff: {diff})"
-        rprint(f"New transactions: {new_txns}, balance {balance_status}")

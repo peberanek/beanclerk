@@ -10,7 +10,7 @@ from ..conftest import TOP_DIR
 
 @pytest.fixture()
 def _mock__get_transactions(monkeypatch: pytest.MonkeyPatch):
-    def mock__get_transactions(*args, **kwargs) -> bytes:  # noqa: ARG001
+    def mock__get_transactions(*args, **kwargs) -> bytes:
         with (TOP_DIR / "importers" / "banka_creditas_transactions.xml").open(
             "rb",
         ) as file:

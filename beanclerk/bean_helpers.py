@@ -1,12 +1,16 @@
 """Helpers for Beancount"""
+from collections.abc import Generator
 from datetime import date
+from typing import TypeVar
 
+from beancount.core.account import is_valid
 from beancount.core.data import (
     EMPTY_SET,
     Account,
     Amount,
     Cost,
     CostSpec,
+    Directive,
     Flag,
     Meta,
     Posting,
@@ -57,8 +61,26 @@ def create_posting(
     )
 
 
-def filter_directives(directives, _type):
-    """Yield only directives of the given type."""
-    for directive in directives:
-        if isinstance(directive, _type):
-            yield directive
+D = TypeVar("D", bound=Directive)
+
+
+def filter_entries(entries: list[Directive], cls: D) -> Generator[D, None, None]:
+    """Yield only instances of a given Beancount directive.
+
+    Args:
+        entries (list[Directive]): a list of Beancount directives
+        cls (Directive): a Beancount directive class
+
+    Yields:
+        Directive: a Beancount directive
+    """
+    """Yield only instances of a given Beancount directive."""
+    for entry in entries:
+        if isinstance(entry, cls):
+            yield entry
+
+
+def check_account_name(name: str) -> None:
+    """Raise ValueError if the account name is invalid."""
+    if not is_valid(name):
+        raise ValueError(f"'{name}' is not a valid Beancount account name")
