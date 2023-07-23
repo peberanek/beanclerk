@@ -128,7 +128,7 @@ def _find_reconcilation_rule(
 
 # FIXME: this fx claims to always return a new Txn
 def _reconcile(
-    txns: list[Transaction],
+    txn: Transaction,
     config: Config,
 ) -> Transaction:
     """Return a new reconciled Transaction.
@@ -144,48 +144,38 @@ def _reconcile(
     Side effects:
     * May modify config.reconcilation_rules, if the user chooses to reload them.
     """
-    reconciled_txns = []
-    for txn in txns:
-        rule = _find_reconcilation_rule(txn, config)
-        if rule is None:
-            reconciled_txns.append(txn)
-        else:
-            # Transaction is immutable, so we need to create a new one
-            units = txn.postings[0].units
-            # TODO: ensure txn has only 1 posting
-            postings = copy.deepcopy(txn.postings)
-            postings.append(
-                create_posting(
-                    account=rule.account,
-                    units=Amount(-units.number, units.currency),
-                ),
-            )
-            reconciled_txns.append(
-                create_transaction(
-                    _date=txn.date,
-                    flag=rule.flag if rule.flag is not None else txn.flag,
-                    payee=rule.payee if rule.payee is not None else txn.payee,
-                    narration=rule.narration
-                    if rule.narration is not None
-                    else txn.narration,
-                    meta=txn.meta,
-                    postings=postings,
-                ),
-            )
-    return reconciled_txns
+    rule = _find_reconcilation_rule(txn, config)
+    if rule is None:  # cannot reconcile
+        return txn
+    # Reconcile: Transaction is immutable, so we need to create a new one
+    # TODO: ensure txn has only 1 posting
+    units = txn.postings[0].units
+    postings = copy.deepcopy(txn.postings)
+    postings.append(
+        create_posting(
+            account=rule.account,
+            units=Amount(-units.number, units.currency),
+        ),
+    )
+    return create_transaction(
+        _date=txn.date,
+        flag=rule.flag if rule.flag is not None else txn.flag,
+        payee=rule.payee if rule.payee is not None else txn.payee,
+        narration=rule.narration if rule.narration is not None else txn.narration,
+        meta=txn.meta,
+        postings=postings,
+    )
 
 
-def _insert_directives(
-    directives: list[Directive],
+def _insert_directive(
+    directive: Directive,
     filepath: Path,
     lineno: int,
 ) -> None:
-    string = ""
-    for d in directives:
-        string += format_entry(d) + "\n"
     with filepath.open("r") as f:
         lines = f.readlines()
-    lines.insert(lineno - 1, string)  # indices start from 0 (line nums from 1)
+    # indices start from 0 (line nums from 1)
+    lines.insert(lineno - 1, format_entry(directive) + "\n")
     with filepath.open("w") as f:
         f.writelines(lines)
 
@@ -195,6 +185,7 @@ def _insert_directives(
 def _get_mark_lineno(filepath: Path, mark_name: str) -> int:
     with filepath.open("r") as f:
         lines = f.readlines()
+    # TODO: efficient definition? A module level variable?
     mark = re.compile(r'^\d{4}-\d{2}-\d{2} custom "beanclerk-mark" ' + mark_name + "$")
     for i, line in enumerate(lines):
         if mark.match(line):
@@ -208,19 +199,11 @@ def import_transactions(
     to_date: date | None,
 ) -> None:
     config = load_config(config_file)
-    for account_config in config.accounts:
-        # Inserting new directives into the input file is tricky. If the file
-        # is changed between the time we load it and the time we write to it,
-        # the line numbers will be wrong.
-        #
-        # Reloading the input file on each iteration makes sure lineno of each
-        # directive is correct. This is necessary for a correct insertion of
-        # new directives.
-        #
-        # There is no check for errors here, because txns from a previous iteration
-        # might be imported unbalanced or incomplete if the user chooses so.
-        directives, _, _ = load_file(config.input_file)
+    directives, errors, _ = load_file(config.input_file)
+    if errors != []:
+        raise ClerkError(f"Errors in the input file: {errors}")
 
+    for account_config in config.accounts:
         if from_date is None:
             from_date = _get_last_import_date(directives, account_config.name)
         if to_date is None:
@@ -233,23 +216,27 @@ def import_transactions(
             to_date=to_date,
         )
 
-        new_txns = [
-            txn
-            for txn in txns
-            if not _txn_id_exists(directives, account_config.name, txn.meta["id"])
-        ]
-        new_txns = _reconcile(new_txns, config)
-        _insert_directives(  # type: ignore[reportUnusedExpression]
-            new_txns,
-            config.input_file,
-            _get_mark_lineno(config.input_file, account_config.name),
-        )
+        new_txns = 0
+        for txn in txns:
+            if _txn_id_exists(directives, account_config.name, txn.meta["id"]):
+                continue
+            new_txns += 1
+            txn = _reconcile(txn, config)  # noqa: PLW2901
 
-        # HACK: Update the list of directives without reloading the whole file
-        #   (it may be a quite expensive operation with Beancount V2).
-        #   Directives become unsorted and potentially unbalanced, but for
-        #   a simple balance check it should be OK.
-        directives.extend(new_txns)
+            # Inserting new directives into the input file is tricky. If the file
+            # is changed between the time we load it and the time we write to it,
+            # the line numbers will be wrong.
+            _insert_directive(
+                txn,
+                config.input_file,
+                _get_mark_lineno(config.input_file, account_config.name),
+            )
+
+            # HACK: Update the list of directives without reloading the whole file
+            #   (it may be a quite expensive operation with Beancount V2).
+            #   Directives become unsorted and potentially unbalanced, but for
+            #   a simple balance check it should be OK.
+            directives.append(txn)
 
         # TODO: refactor into a separate function
         diff = (
@@ -260,4 +247,4 @@ def import_transactions(
             balance_status = f"OK: {balance}"
         else:
             balance_status = f"NOT OK: {balance} (diff: {diff})"
-        rprint(f"New transactions: {len(new_txns)}, balance {balance_status}")
+        rprint(f"New transactions: {new_txns}, balance {balance_status}")
