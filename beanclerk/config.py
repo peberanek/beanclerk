@@ -1,8 +1,13 @@
-# ruff: noqa: N805
+"""Configuration file parsing and validation.
 
-# NOTES:
-# * If a validator modifies a value, it should always return a value of the
-#   same type: https://github.com/pydantic/pydantic/discussions/3997
+Notes:
+    * If a validator modifies a value, it should always return the same type:
+    https://github.com/pydantic/pydantic/discussions/3997
+
+TODO:
+    * Add missing field validators.
+"""
+# ruff: noqa: N805
 
 import os
 from pathlib import Path
@@ -15,16 +20,21 @@ from pydantic_settings import BaseSettings
 
 from .exceptions import ConfigError
 
-# TODO: add note: always return None if a key is missing
+
+class BaseModelStrict(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 class AccountConfig(BaseModel):
-    name: str  # TODO: rename to `account`?
-    importer: str  # requires complex validation, moved to the `clerk` module
+    """Account config model
 
-    # To support custom importers, each importer is set up via extra keys.
-    # TODO: why explicit allow? To Include extra keys?
-    model_config = ConfigDict(extra="allow")
+    Allows extra fields to support custom configuration of importers.
+    """
+
+    name: str
+    importer: str
+
+    model_config = ConfigDict(extra="allow")  # allows access to extra fields
 
     @field_validator("name")
     def name_is_valid(cls, name: str) -> str:
@@ -33,36 +43,39 @@ class AccountConfig(BaseModel):
         return name
 
 
-class MatchCategories(BaseModel):
+class MatchCategories(BaseModelStrict):
     metadata: dict[str, str]
 
-    model_config = ConfigDict(extra="forbid")
 
-
-class ReconcilationRule(BaseModel):
+class ReconcilationRule(BaseModelStrict):
     matches: MatchCategories
-    account: str  # TODO: validate
-    flag: str | None = None  # TODO: validate
+    account: str
+    flag: str | None = None
     payee: str | None = None
     narration: str | None = None
 
-    model_config = ConfigDict(extra="forbid")
 
-
-# TODO: Does it make sense to prevent additional arbitrary fields?
 class Config(BaseSettings):
+    """Beanclerk configuration
+
+    Most attributes are defined in a config file. Config is a Pydantic
+    model, and raises a `pydantic.ValidationError` on invalid fields.
+    """
+
     vars: Any = None  # noqa: A003
     input_file: Path
     accounts: list[AccountConfig]
     reconcilation_rules: list[ReconcilationRule] | None = None
 
-    # additional fields (not present in the config file)
+    # fields not present in the config file
     config_file: Path
 
     model_config = ConfigDict(extra="forbid")
 
     @field_validator("input_file")
     def input_file_exists(cls, input_file: Path) -> Path:
+        # Side effects:
+        #   * expands user (`~`) and environment variables
         filename: str = os.path.expandvars(input_file.expanduser())
         if not os.path.isabs(filename):  # noqa: PTH117
             filename = os.path.normpath(Path.cwd() / filename)
