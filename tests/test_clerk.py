@@ -3,6 +3,7 @@
 TODO:
     * Some tests are rather incomplete or a mess (mostly sanity only;
     multiple tests, share the same test data). Improve them.
+    * Test fn append_entry_to_file.
 """
 from datetime import date
 from decimal import Decimal
@@ -19,12 +20,10 @@ from beanclerk.clerk import (
     compute_balance,
     find_categorization_rule,
     find_last_import_date,
-    find_mark_lineno,
     import_transactions,
     transaction_exists,
 )
 from beanclerk.config import Config, load_config
-from beanclerk.exceptions import ClerkError
 
 CZK = "CZK"
 
@@ -100,13 +99,6 @@ def test_categorize(config: Config, entries: list[Transaction]):
     txn_2 = categorize(entries[1], config)
     assert txn_2.payee is None
     assert not any("Expenses:Todo" in p.account for p in txn_2.postings)
-
-
-def test_find_mark_lineno(ledger: Path):
-    assert find_mark_lineno(ledger, "Assets:Banks:Fio:Checking") == 9  # noqa: PLR2004
-    assert find_mark_lineno(ledger, "Assets:Banks:Fio:Savings") == 11  # noqa: PLR2004
-    with pytest.raises(ClerkError, match="mark .+ not found"):
-        find_mark_lineno(ledger, "Assets:Nonexistent")
 
 
 def test_compute_balance(entries: list[Transaction]):

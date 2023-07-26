@@ -20,7 +20,7 @@ from pathlib import Path
 from beancount.core.data import Amount, Directive, Transaction, TxnPosting
 from beancount.core.realization import compute_postings_balance, postings_by_account
 from beancount.loader import load_file
-from beancount.parser.printer import format_entry
+from beancount.parser.printer import print_entry
 from rich import print as rprint
 from rich.prompt import Prompt
 
@@ -233,47 +233,24 @@ def categorize(transaction: Transaction, config: Config) -> Transaction:
     )
 
 
-def insert_entry(entry: Directive, filepath: Path, lineno: int) -> None:
-    """Insert an entry into a file.
+def append_entry_to_file(entry: Directive, filepath: Path) -> None:
+    """Append an entry to a file.
 
     Args:
         entry (Directive): a Beancount directive
         filepath (Path): a file path
-        lineno (int): line number before which to insert the entry
     """
     with filepath.open("r") as f:
         lines = f.readlines()
-    # indices start from 0 (line nums from 1)
-    lines.insert(lineno - 1, format_entry(entry) + "\n")
-    with filepath.open("w") as f:
-        f.writelines(lines)
-
-
-def find_mark_lineno(filepath: Path, mark_name: str) -> int:
-    """Find the line number of a custom 'beanclerk-mark' directive in a file.
-
-    Args:
-        filepath (Path): a Beancount input file
-        mark_name (str): a mark name, e.g. 'Assets:Bank:MyBank'
-
-    Raises:
-        ClerkError: _description_
-
-    Returns:
-        int: _description_
-    """
-    # Loading a Beancount input file may be quite slow, so reloading it just
-    # to get a lineno of 1 directive is inefficient. Using a simple regex
-    # is faster.
-    with filepath.open("r") as f:
-        lines = f.readlines()
-    # The compiled versions of the most recent patterns passed to `re.compile()`
-    # are cached.
-    mark = re.compile(r'^\d{4}-\d{2}-\d{2} custom "beanclerk-mark" ' + mark_name + "$")
-    for i, line in enumerate(lines):
-        if mark.match(line):
-            return i + 1
-    raise ClerkError(f"Beanclerk mark '{mark_name}' not found")
+        last_line = lines[-1] if lines else ""
+    with filepath.open("a") as f:
+        if last_line == "\n":
+            pass
+        elif not last_line.endswith("\n"):
+            f.write(2 * "\n")
+        else:
+            f.write("\n")
+        print_entry(entry, file=f)
 
 
 def print_import_status(
@@ -344,17 +321,7 @@ def import_transactions(
                 continue
             new_txns += 1
             txn = categorize(txn, config)  # noqa: PLW2901
-
-            # Inserting entries into the input file is tricky. We cannot rely on
-            # line numbers of entries loaded from the file, because the file may
-            # change between the time we load it and the time we write to it
-            # (typically due to interactive categorization). Therefore, the lineno
-            # of a Beanclerk mark has to be updated before each new insertion.
-            insert_entry(
-                txn,
-                config.input_file,
-                find_mark_lineno(config.input_file, account_config.account),
-            )
+            append_entry_to_file(txn, config.input_file)
 
             # HACK: Update the list of entries without reloading the whole input
             #   file (it may be a quite slow with the Beancount v2). This way
