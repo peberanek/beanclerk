@@ -1,5 +1,8 @@
 """Banka Creditas a.s.
 
+TODO:
+    This module is a work in progress. It needs a major rework.
+
 docs:
     https://www.creditas.cz/firma/creditas-api/
 """
