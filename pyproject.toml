@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "beanclerk"
-version = "0.0.4dev3"
+version = "0.0.4dev4"
 authors = [{ name = "Petr Beranek", email = "petrberanek.mail@gmail.com" }]
 license = { file = "LICENSE" }
 description = "Automation for Beancount"
