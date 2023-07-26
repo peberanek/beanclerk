@@ -8,7 +8,7 @@ import click
 from .clerk import import_transactions
 from .exceptions import BeanclerkError
 
-CONFIG_FILE: str = "beanclerk-config.yml"
+CONFIG_FILE = "beanclerk-config.yml"
 
 
 @click.group(
@@ -20,21 +20,26 @@ CONFIG_FILE: str = "beanclerk-config.yml"
     "--config-file",
     default=Path.cwd() / CONFIG_FILE,
     type=click.Path(path_type=Path),
-    help=f"Path to the config file; defaults to `{CONFIG_FILE}` in the current working directory.",  # noqa: E501
+    help=f"Path to a config file; defaults to `{CONFIG_FILE}` in the current working directory.",  # noqa: E501
 )
 @click.pass_context
 def cli(ctx: click.Context, config_file: Path) -> None:
-    """Additional automation for Beancount."""
+    """Automation for Beancount.
+
+    Import and categorize transactions via API importers and user-defined rules.
+    """
     # https://click.palletsprojects.com/en/8.1.x/commands/#nested-handling-and-contexts
     ctx.ensure_object(dict)
     ctx.obj["config_file"] = config_file
 
 
-# TODO: simplify by subclassing click.DateTime?
+_ISO_DATE_FMT: str = "YYYY-MM-DD"
+
+
 class Date(click.ParamType):
     """A convenience date type for Click.
 
-    Converts dates to a date instead of datetime.
+    Converts dates to a date (instead of datetime).
     """
 
     name = "date"
@@ -45,19 +50,27 @@ class Date(click.ParamType):
         try:
             return date.fromisoformat(value)
         except ValueError:
-            self.fail(f"'{value}' is not a valid date format (YYYY-MM-DD)", param, ctx)
+            self.fail(
+                f"'{value}' is not a valid date format ({_ISO_DATE_FMT})",
+                param,
+                ctx,
+            )
 
 
 @cli.command("import")
-@click.option("--from-date", type=Date(), help="The first date to import (YYYY-MM-DD).")
-@click.option("--to-date", type=Date(), help="The last date to import (YYYY-MM-DD).")
+@click.option(
+    "--from-date",
+    type=Date(),
+    help=f"The first date to import ({_ISO_DATE_FMT}).",
+)
+@click.option(
+    "--to-date",
+    type=Date(),
+    help=f"The last date to import ({_ISO_DATE_FMT}).",
+)
 @click.pass_context
-def import_(
-    ctx: click.Context,
-    from_date: click.DateTime,  # FIXME: use Date() instead
-    to_date: click.DateTime,  # FIXME: use Date() instead
-) -> None:
-    """Import transactions from configured importers."""
+def import_(ctx: click.Context, from_date: Date, to_date: Date) -> None:
+    """Import transactions and check the current balance."""
     try:
         import_transactions(
             config_file=ctx.obj["config_file"],

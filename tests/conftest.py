@@ -9,10 +9,11 @@ import pytest
 TOP_DIR = Path(os.path.realpath(__file__)).parent
 
 
-# Prevent real API calls by autousing this fixture.
-@pytest.fixture(autouse=True)
+@pytest.fixture()
 def _mock_fio_banka(monkeypatch: pytest.MonkeyPatch):
-    def mock__request(*args, **kwargs) -> str:  # noqa: ARG001
+    """Mock fio_banka package."""
+
+    def mock__request(*args, **kwargs) -> str:
         with (TOP_DIR / "importers" / "fio_banka_transactions.json").open("r") as file:
             return file.read()
 

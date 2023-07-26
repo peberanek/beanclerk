@@ -1,4 +1,7 @@
-"""Fio banka, a.s.
+"""API importer for Fio banka, a.s.
+
+TODO:
+    * handle fio_banka exceptions
 
 docs:
     https://www.fio.cz/bank-services/internetbanking-api
@@ -14,7 +17,11 @@ from . import ApiImporterProtocol, TransactionReport, prepare_meta
 
 
 class ApiImporter(ApiImporterProtocol):
-    """Importer for Fio banka, a.s. API"""
+    """API importer for Fio banka, a.s.
+
+    Args:
+        token (str): Fio banka API token
+    """
 
     def __init__(self, token: str) -> None:
         self._token = token
@@ -25,16 +32,6 @@ class ApiImporter(ApiImporterProtocol):
         from_date: date,
         to_date: date,
     ) -> TransactionReport:
-        """Return a tuple with the list of transactions and the current balance.
-
-        Args:
-            bean_account: Beancount account name.
-            from_date: Date from which to fetch transactions.
-            to_date: Date to which to fetch transactions.
-
-        Returns:
-            tuple: A tuple with the list of transactions and the current balance.
-        """
         client = fio_banka.Account(self._token)
         statement = client.periods(from_date, to_date, fio_banka.TransactionsFmt.JSON)
 
