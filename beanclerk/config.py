@@ -34,12 +34,12 @@ class AccountConfig(BaseModel):
     Allows extra fields to support custom configuration of importers.
     """
 
-    name: str
+    account: str
     importer: str
 
     model_config = ConfigDict(extra="allow")  # allows access to extra fields
 
-    @field_validator("name")
+    @field_validator("account")
     def name_is_valid(cls, name: str) -> str:
         check_account_name(name)
         return name

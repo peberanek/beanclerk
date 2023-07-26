@@ -320,10 +320,10 @@ def import_transactions(
         raise ClerkError(f"Errors in the input file: {errors}")
 
     for account_config in config.accounts:
-        rprint(f"Importing transactions for account: '{account_config.name}'")
+        rprint(f"Importing transactions for account: '{account_config.account}'")
         if from_date is None:
             # TODO: sort entries by date
-            last_date = find_last_import_date(entries, account_config.name)
+            last_date = find_last_import_date(entries, account_config.account)
             if last_date is None:
                 # TODO: catch and add a note the user should use --from-date option
                 raise ClerkError("Cannot determine the initial import date.")
@@ -333,14 +333,14 @@ def import_transactions(
             to_date = date.today()  # noqa: DTZ011
         importer: ApiImporterProtocol = load_importer(account_config)
         txns, balance = importer.fetch_transactions(
-            bean_account=account_config.name,
+            bean_account=account_config.account,
             from_date=from_date,
             to_date=to_date,
         )
 
         new_txns = 0
         for txn in txns:
-            if transaction_exists(entries, account_config.name, txn.meta["id"]):
+            if transaction_exists(entries, account_config.account, txn.meta["id"]):
                 continue
             new_txns += 1
             txn = categorize(txn, config)  # noqa: PLW2901
@@ -353,7 +353,7 @@ def import_transactions(
             insert_entry(
                 txn,
                 config.input_file,
-                find_mark_lineno(config.input_file, account_config.name),
+                find_mark_lineno(config.input_file, account_config.account),
             )
 
             # HACK: Update the list of entries without reloading the whole input
@@ -365,5 +365,5 @@ def import_transactions(
         print_import_status(
             new_txns,
             balance.number,
-            compute_balance(entries, account_config.name, balance.currency).number,
+            compute_balance(entries, account_config.account, balance.currency).number,
         )

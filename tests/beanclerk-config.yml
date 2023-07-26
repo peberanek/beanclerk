@@ -1,16 +1,16 @@
 ---
-vars: # optional
-  fio_importer: &fio_importer "beanclerk.importers.fio_banka.ApiImporter" # YAML anchor
+vars: # optional; useful for defining YAML anchors to reuse common values
+  fio_importer: &fio_importer "beanclerk.importers.fio_banka.ApiImporter" # a YAML anchor
 
 # Beancount ledger, path may be relative or absolute, may include ~ or env vars.
 input_file: "${TEST_DIR}/ledger.beancount"
 
 accounts:
-  - name: "Assets:Banks:Fio:Checking"
-    importer: *fio_importer # YAML alias
+  - account: "Assets:Banks:Fio:Checking" # an existing Beancount account
+    importer: *fio_importer # YAML alias (points to a YAML anchor)
     # `name` and `importer` are required, `token` is an importer-specific setting
     token: "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF"
-  - name: "Assets:Banks:Fio:Savings"
+  - account: "Assets:Banks:Fio:Savings"
     importer: *fio_importer # YAML alias
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
@@ -18,10 +18,10 @@ categorization_rules: # optional
   # 1 example rule
   - matches:
       metadata:
-        # any metadata that a particular importer might set
-        ks: "0558" # an importer-specific metadata
-        # type: "" # matches anything
-    account: "Expenses:Todo" # the other leg of any matching transaction
+        # any metadata that an importer might set
+        ks: "0558" # a metadata set by an importer
+    # a new postings to be added to the transaction
+    account: "Expenses:Todo" # an arbitrary Beancount account (may exist or not)
     flag: "!" # optional
     payee: "My payee" # optional
     narration: "My narration" # optional
