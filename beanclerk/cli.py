@@ -26,7 +26,7 @@ CONFIG_FILE = "beanclerk-config.yml"
 def cli(ctx: click.Context, config_file: Path) -> None:
     """Automation for Beancount.
 
-    Import and reconcile transactions via API importers and reconcilation rules.
+    Import and categorize transactions via API importers and user-defined rules.
     """
     # https://click.palletsprojects.com/en/8.1.x/commands/#nested-handling-and-contexts
     ctx.ensure_object(dict)

@@ -14,7 +14,7 @@ accounts:
     importer: *fio_importer # YAML alias
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
-reconcilation_rules: # optional
+categorization_rules: # optional
   # 1 example rule
   - matches:
       metadata:

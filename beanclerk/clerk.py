@@ -30,7 +30,7 @@ from .bean_helpers import (
     create_transaction,
     filter_entries,
 )
-from .config import Config, ReconcilationRule, load_config, load_importer
+from .config import CategorizationRule, Config, load_config, load_importer
 from .exceptions import ClerkError
 from .importers import ApiImporterProtocol
 
@@ -117,40 +117,41 @@ def compute_balance(
     ).get_currency_units(currency)
 
 
-def find_reconcilation_rule(
+def find_categorization_rule(
     transaction: Transaction,
     config: Config,
-) -> ReconcilationRule | None:
-    """Return a reconcilation rule matching the given transaction.
+) -> CategorizationRule | None:
+    """Return a categorization rule matching the given transaction.
 
     If no rule matches the transaction, the user is prompted to choose
     an action to resolve the situation. The user may also choose not
-    to reconcile the transaction and None is returned.
+    to categorize the transaction, None is returned then.
 
     Args:
         transaction (Transaction): a Beancount transaction
         config (Config): Beanclerk config
 
     Raises:
-        ClerkError: Raised if a reconcilation rule is found to be invalid
-            or an unexpected action is chosen by the user.
+        ClerkError: if a categorization rule is invalid.
+        ClerkError: if a dangerous pattern is used in a categorization rule.
+        ClerkError: if an unexpected action is chosen by the user.
 
     Returns:
-        ReconcilationRule | None: a matching reconcilation rule, or None
+        CategorizationRule | None: a matching rule, or None
     """
     while True:
-        if config.reconcilation_rules:
-            for rule in config.reconcilation_rules:
+        if config.categorization_rules:
+            for rule in config.categorization_rules:
                 if len(rule.matches.metadata) == 0:
                     raise ClerkError(
-                        f"Reconcilation rule: {rule}\n"
+                        f"Categorization rule: {rule}\n"
                         "Sanity check failed: no patterns to match",
                     )
                 num_matches = 0
                 for key, pattern in rule.matches.metadata.items():
                     if pattern == "":
                         raise ClerkError(
-                            f"Reconcilation rule: {rule}\n"
+                            f"Categorization rule: {rule}\n"
                             'Dangerous pattern "" matches everything. '
                             'Use ".*" or "^$" instead.',
                         )
@@ -162,19 +163,19 @@ def find_reconcilation_rule(
                 if num_matches == len(rule.matches.metadata):
                     return rule
 
-        rprint("No reconcilation rule matches the following transaction:")
+        rprint("No categorization rule matches the following transaction:")
         rprint(transaction)
         rprint("Available actions:")
         rprint("'r': reload config (you should add a new rule first)")
         rprint("'i': import as-is (transaction remains unbalanced)")
         match Prompt.ask("Enter the action", choices=["r", "i"]):
             case "r":
-                # Reload only the reconcilation rules, changing the other
+                # Reload only the categorization rules, changing the other
                 # parts of the config may cause unexpected issues down
                 # the road.
-                config.reconcilation_rules = load_config(
+                config.categorization_rules = load_config(
                     config.config_file,
-                ).reconcilation_rules
+                ).categorization_rules
                 continue
             case "i":
                 break
@@ -183,19 +184,17 @@ def find_reconcilation_rule(
     return None
 
 
-# FIXME: rename to `categorize` (fix this term in parts of the program as well);
-#   reconcilation is a different process.
-def reconcile(transaction: Transaction, config: Config) -> Transaction:
-    """Return transaction reconciled according to rules set in config.
+def categorize(transaction: Transaction, config: Config) -> Transaction:
+    """Return transaction categorized according to rules set in config.
 
-    Reconcilation means adding any missing postings (legs) to a transaction
-    to make it balanced. Reconcilation may also fill in a missing payee,
-    narration and transaction flag.
+    Categorization means adding any missing postings (legs) to a transaction
+    to make it balanced. It may also fill in a missing payee, narration or
+    transaction flag.
 
     The rules are applied in the order they are defined in the config file.
 
     The returned transaction is either a new instance (if new data have
-    been added), or the original one if no matching reconcilation rule was
+    been added), or the original one if no matching categorization rule was
     found.
 
     Args:
@@ -203,17 +202,17 @@ def reconcile(transaction: Transaction, config: Config) -> Transaction:
         config (Config): Beanclerk config
 
     Side effects:
-        * `config.reconcilation_rules` may be modified if the user chooses to
-        manually edit and reload the config file during the interactive
-        reconcilation process.
+        * `config.categorization_rules` may be modified if the user chooses
+        to manually edit and reload the config file during the interactive
+        categorization process.
 
     Returns:
-        Transaction: a Beancount transaction (it may be reconciled, or not)
+        Transaction: a Beancount transaction
     """
-    rule = find_reconcilation_rule(transaction, config)
+    rule = find_categorization_rule(transaction, config)
     if rule is None:
         return transaction
-    # Reconcile: Transaction is immutable, so we need to create a new one
+    # Do categorize (Transaction is immutable, so we need to create a new one)
     units = transaction.postings[0].units
     postings = copy.deepcopy(transaction.postings)
     postings.append(
@@ -344,12 +343,12 @@ def import_transactions(
             if transaction_exists(entries, account_config.name, txn.meta["id"]):
                 continue
             new_txns += 1
-            txn = reconcile(txn, config)  # noqa: PLW2901
+            txn = categorize(txn, config)  # noqa: PLW2901
 
             # Inserting entries into the input file is tricky. We cannot rely on
             # line numbers of entries loaded from the file, because the file may
             # change between the time we load it and the time we write to it
-            # (typically due to interactive reconcilation). Therefore, the lineno
+            # (typically due to interactive categorization). Therefore, the lineno
             # of a Beanclerk mark has to be updated before each new insertion.
             insert_entry(
                 txn,

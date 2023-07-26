@@ -49,7 +49,7 @@ class MatchCategories(BaseModelStrict):
     metadata: dict[str, str]
 
 
-class ReconcilationRule(BaseModelStrict):
+class CategorizationRule(BaseModelStrict):
     matches: MatchCategories
     account: str
     flag: str | None = None
@@ -67,7 +67,7 @@ class Config(BaseSettings):
     vars: Any = None  # noqa: A003
     input_file: Path
     accounts: list[AccountConfig]
-    reconcilation_rules: list[ReconcilationRule] | None = None
+    categorization_rules: list[CategorizationRule] | None = None
 
     # fields not present in the config file
     config_file: Path

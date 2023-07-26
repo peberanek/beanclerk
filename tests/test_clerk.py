@@ -15,12 +15,12 @@ from beancount.loader import load_file
 
 from beanclerk.bean_helpers import create_posting, create_transaction
 from beanclerk.clerk import (
+    categorize,
     compute_balance,
+    find_categorization_rule,
     find_last_import_date,
     find_mark_lineno,
-    find_reconcilation_rule,
     import_transactions,
-    reconcile,
     transaction_exists,
 )
 from beanclerk.config import Config, load_config
@@ -79,25 +79,25 @@ def _mock_prompt(monkeypatch) -> None:
 
 
 @pytest.mark.usefixtures("_mock_prompt")
-def test_find_reconcilation_rule(config: Config, entries: list[Transaction]) -> None:
-    """Test find_reconcilation_rule."""
-    rule_1 = find_reconcilation_rule(entries[0], config)
+def test_find_categorization_rule(config: Config, entries: list[Transaction]) -> None:
+    """Test find_categorization_rule."""
+    rule_1 = find_categorization_rule(entries[0], config)
     assert rule_1 is not None
     assert rule_1.account == "Expenses:Todo"
     assert rule_1.payee == "My payee"
 
-    rule_2 = find_reconcilation_rule(entries[1], config)
+    rule_2 = find_categorization_rule(entries[1], config)
     assert rule_2 is None
 
 
 @pytest.mark.usefixtures("_mock_prompt")
-def test_reconcile(config: Config, entries: list[Transaction]):
-    """Test reconcile."""
-    txn_1 = reconcile(entries[0], config)
+def test_categorize(config: Config, entries: list[Transaction]):
+    """Test categorize."""
+    txn_1 = categorize(entries[0], config)
     assert txn_1.payee == "My payee"
     assert any("Expenses:Todo" in p.account for p in txn_1.postings)
 
-    txn_2 = reconcile(entries[1], config)
+    txn_2 = categorize(entries[1], config)
     assert txn_2.payee is None
     assert not any("Expenses:Todo" in p.account for p in txn_2.postings)
 
