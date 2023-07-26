@@ -5,10 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "beanclerk"
 version = "0.0.4dev3"
-authors = [
-  { name = "Petr Beranek", email = "petrberanek.mail@gmail.com" },
-]
-license = {file = "LICENSE"}
+authors = [{ name = "Petr Beranek", email = "petrberanek.mail@gmail.com" }]
+license = { file = "LICENSE" }
 description = "Automation for Beancount"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,7 +26,7 @@ dependencies = [
   "PyYAML~=6.0",
   "beancount~=2.3",
   "click~=8.1",
-  "creditas==1.0.0.*", # https://github.com/peberanek/creditas/blob/main/README.md#versioning
+  "creditas==1.0.0.*",      # https://github.com/peberanek/creditas/blob/main/README.md#versioning
   "fio-banka~=1.0",
   "lxml~=4.9",
   "pydantic-settings~=2.0",
@@ -37,10 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-devel = [
-  "pre-commit~=3.3",
-  "pytest~=7.4",
-]
+devel = ["pre-commit~=3.3", "pytest~=7.4"]
 
 [project.scripts]
 bean-clerk = "beanclerk.cli:cli"
@@ -55,38 +50,38 @@ ignore_missing_imports = true
 [tool.ruff]
 # https://beta.ruff.rs/docs/rules/
 select = [
-  "F",    # pyflakes
-  "E",    # pycodestyle
-  "C90",  # mccabe
-  "I",    # isort
-  "N",    # pep8-naming
-  "UP",   # pyupgrade
-  "YTT",  # flake8-2020
-  "S",    # flake8-bandit
-  "BLE",  # flake8-blind-except
-  "FBT",  # flake8-boolean-trap
-  "B",    # flake8-bugbear
-  "A",    # flake8-builtins
-  "COM",  # flake8-commas
-  "C4",   # flake8-comprehensions
-  "DTZ",  # flake8-datetimez
-  "T10",  # flake8-debugger
-  "INP",  # flake8-no-pep420
-  "PIE",  # flake8-pie
-  "T20",  # flake8-print
-  "PT",   # flake8-pytest-style
-  "Q",    # flake8-quotes
-  "RSE",  # flake8-raise
-  "RET",  # flake8-return
-  "SLF",  # flake8-self
-  "SIM",  # flake8-simplify
-  "ARG",  # flake8-unused-arguments
-  "PTH",  # flake8-use-pathlib
-  "PGH",  # pygrep-hooks
-  "PL",   # pylint
-  "TRY",  # tryceptors
-  "FLY",  # flynt
-  "RUF",  # Ruff-specific rules
+  "F",   # pyflakes
+  "E",   # pycodestyle
+  "C90", # mccabe
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade
+  "YTT", # flake8-2020
+  "S",   # flake8-bandit
+  "BLE", # flake8-blind-except
+  "FBT", # flake8-boolean-trap
+  "B",   # flake8-bugbear
+  "A",   # flake8-builtins
+  "COM", # flake8-commas
+  "C4",  # flake8-comprehensions
+  "DTZ", # flake8-datetimez
+  "T10", # flake8-debugger
+  "INP", # flake8-no-pep420
+  "PIE", # flake8-pie
+  "T20", # flake8-print
+  "PT",  # flake8-pytest-style
+  "Q",   # flake8-quotes
+  "RSE", # flake8-raise
+  "RET", # flake8-return
+  "SLF", # flake8-self
+  "SIM", # flake8-simplify
+  "ARG", # flake8-unused-arguments
+  "PTH", # flake8-use-pathlib
+  "PGH", # pygrep-hooks
+  "PL",  # pylint
+  "TRY", # tryceptors
+  "FLY", # flynt
+  "RUF", # Ruff-specific rules
 ]
 ignore = ["TRY003"]
 unfixable = [
