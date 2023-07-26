@@ -74,13 +74,19 @@ def filter_entries(entries: list[Directive], cls: D) -> Generator[D, None, None]
     Yields:
         Directive: a Beancount directive
     """
-    """Yield only instances of a given Beancount directive."""
     for entry in entries:
         if isinstance(entry, cls):
             yield entry
 
 
 def check_account_name(name: str) -> None:
-    """Raise ValueError if the account name is invalid."""
+    """Check a Beanount account name.
+
+    Args:
+        name (str): a Beancount account name
+
+    Raises:
+        ValueError: if the account name is invalid
+    """
     if not is_valid(name):
         raise ValueError(f"'{name}' is not a valid Beancount account name")
