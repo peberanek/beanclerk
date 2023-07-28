@@ -15,6 +15,7 @@ CONFIG_FILE = "beanclerk-config.yml"
     context_settings={"help_option_names": ["-h", "--help"]},
     no_args_is_help=False,
 )
+@click.version_option()
 @click.option(
     "-c",
     "--config-file",
