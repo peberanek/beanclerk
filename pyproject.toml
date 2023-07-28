@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "beanclerk"
-version = "0.0.4"
+dynamic = ["version"]
 authors = [{ name = "Petr Beranek", email = "petrberanek.mail@gmail.com" }]
 license = { file = "LICENSE" }
 description = "Automation for Beancount"
@@ -39,6 +39,8 @@ devel = ["pre-commit~=3.3", "pytest~=7.4"]
 
 [project.scripts]
 bean-clerk = "beanclerk.cli:cli"
+
+[tool.setuptools_scm]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
