@@ -1,8 +1,8 @@
-"""Clerk operations
+"""Clerk operations.
 
 This module provides operations consumed by the CLI.
 
-TODO:
+Todo:
     * handle exceptions
     * Python docs recommend to use utf-8 encoding for reading and writing files
     * validate txns coming from importers:
@@ -289,7 +289,6 @@ def import_transactions(
         ClerkError: raised if there are errors in the input file
         ClerkError: raised if the initial import date cannot be determined
     """
-    """For each configured importer, import transactions and print import status."""
     config = load_config(config_file)
     entries, errors, _ = load_file(config.input_file)
     if errors != []:

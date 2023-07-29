@@ -1,4 +1,4 @@
-"""Beanclerk command-line interface"""
+"""Beanclerk command-line interface."""
 
 from datetime import date
 from pathlib import Path
@@ -45,7 +45,7 @@ class Date(click.ParamType):
 
     name = "date"
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # noqa: D102
         if isinstance(value, date):
             return value
         try:

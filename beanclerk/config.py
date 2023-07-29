@@ -4,7 +4,7 @@ Notes:
     * If a validator modifies a value, it should always return the same type:
     https://github.com/pydantic/pydantic/discussions/3997
 
-TODO:
+Todo:
     * Add missing field validators.
 """
 # Disabling due to Pydantic notation (`cls` instead of `self`).
@@ -24,12 +24,12 @@ from .exceptions import ConfigError
 from .importers import ApiImporterProtocol
 
 
-class BaseModelStrict(BaseModel):
+class _BaseModelStrict(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
 class AccountConfig(BaseModel):
-    """Account config model
+    """Account config model.
 
     Allows extra fields to support custom configuration of importers.
     """
@@ -41,15 +41,20 @@ class AccountConfig(BaseModel):
 
     @field_validator("account")
     def name_is_valid(cls, name: str) -> str:
+        """Validate account name."""
         check_account_name(name)
         return name
 
 
-class MatchCategories(BaseModelStrict):
+class MatchCategories(_BaseModelStrict):
+    """Match categories model."""
+
     metadata: dict[str, str]
 
 
-class CategorizationRule(BaseModelStrict):
+class CategorizationRule(_BaseModelStrict):
+    """Categorization rule model."""
+
     matches: MatchCategories
     account: str
     flag: str | None = None
@@ -58,7 +63,7 @@ class CategorizationRule(BaseModelStrict):
 
 
 class Config(BaseSettings):
-    """Beanclerk config
+    """Beanclerk config model.
 
     Most attributes are defined in a config file. Config is a Pydantic
     model, and raises a `pydantic.ValidationError` on invalid fields.
@@ -76,8 +81,11 @@ class Config(BaseSettings):
 
     @field_validator("input_file")
     def input_file_exists(cls, input_file: Path) -> Path:
-        # Side effects:
-        #   * expands user (`~`) and environment variables
+        """Validate input file exists.
+
+        Side effects:
+            * expands user (`~`) and environment variables
+        """
         filename: str = os.path.expandvars(input_file.expanduser())
         if not os.path.isabs(filename):  # noqa: PTH117
             filename = os.path.normpath(Path.cwd() / filename)
@@ -112,7 +120,7 @@ def load_importer(account_config: AccountConfig) -> ApiImporterProtocol:
     """Return an instance of importer defined in the account config.
 
     Args:
-        account_config (AccountConfig)
+        account_config (AccountConfig): an account configuration
 
     Raises:
         ConfigError: Raised when the importer cannot be loaded

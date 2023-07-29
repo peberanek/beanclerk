@@ -1,6 +1,6 @@
 """Banka Creditas a.s.
 
-TODO:
+Todo:
     This module is a work in progress. It needs a major rework.
 
 docs:
@@ -49,7 +49,7 @@ def _get_transactions(token: str, account_id: str, from_date: date) -> bytes:
 
 
 # FIXME: This function has to be turned into a class implementing ApiImporterProtocol.
-def get_transactions(
+def get_transactions(  # noqa: D103
     token: str,
     account_id: str,
     bean_account: str,

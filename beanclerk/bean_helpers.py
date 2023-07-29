@@ -1,4 +1,4 @@
-"""Helpers for Beancount"""
+"""Helpers for Beancount."""
 from collections.abc import Generator
 from datetime import date
 from typing import TypeVar

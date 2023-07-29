@@ -1,6 +1,6 @@
 """Tests of the clerk module.
 
-TODO:
+Todo:
     * Some tests are rather incomplete or a mess (mostly sanity only;
     multiple tests, share the same test data). Improve them.
     * Test fn append_entry_to_file.
