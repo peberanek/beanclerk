@@ -1,4 +1,4 @@
-"""API Importer Protocol and utilities for custom importers"""
+"""API Importer Protocol and utilities for custom importers."""
 
 import abc
 from datetime import date
@@ -26,7 +26,7 @@ def prepare_meta(d: dict[str, Any]) -> dict[str, str]:
 
 
 class ApiImporterProtocol(abc.ABC):
-    """API Importer Protocol for custom importers
+    """API Importer Protocol for custom importers.
 
     All API importers must comply with this interface. Make sure to implement
     all methods decorated with `@abc.abstractmethod`. There are no restrictions

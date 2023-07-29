@@ -1,4 +1,4 @@
-"""Beanclerk command-line interface"""
+"""Beanclerk command-line interface."""
 
 from datetime import date
 from pathlib import Path
@@ -15,6 +15,7 @@ CONFIG_FILE = "beanclerk-config.yml"
     context_settings={"help_option_names": ["-h", "--help"]},
     no_args_is_help=False,
 )
+@click.version_option()
 @click.option(
     "-c",
     "--config-file",
@@ -44,7 +45,7 @@ class Date(click.ParamType):
 
     name = "date"
 
-    def convert(self, value, param, ctx):
+    def convert(self, value, param, ctx):  # noqa: D102
         if isinstance(value, date):
             return value
         try:

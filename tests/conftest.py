@@ -1,4 +1,4 @@
-"""Common fixtures and helper functions for tests"""
+"""Common fixtures and helper functions for tests."""
 import os
 import shutil
 from pathlib import Path

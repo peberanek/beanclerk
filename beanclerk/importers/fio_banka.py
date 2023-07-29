@@ -1,6 +1,6 @@
 """API importer for Fio banka, a.s.
 
-TODO:
+Todo:
     * handle fio_banka exceptions
 
 docs:
@@ -17,16 +17,17 @@ from . import ApiImporterProtocol, TransactionReport, prepare_meta
 
 
 class ApiImporter(ApiImporterProtocol):
-    """API importer for Fio banka, a.s.
-
-    Args:
-        token (str): Fio banka API token
-    """
+    """API importer for Fio banka, a.s."""
 
     def __init__(self, token: str) -> None:
+        """Initialize the importer.
+
+        Args:
+            token (str): _description_
+        """
         self._token = token
 
-    def fetch_transactions(
+    def fetch_transactions(  # noqa: D102
         self,
         bean_account: str,
         from_date: date,

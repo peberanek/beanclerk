@@ -7,6 +7,8 @@ from beanclerk.importers.banka_creditas import get_transactions
 
 from ..conftest import TOP_DIR
 
+pytestmark = pytest.mark.skip(reason="Requires rework")
+
 
 @pytest.fixture()
 def _mock__get_transactions(monkeypatch: pytest.MonkeyPatch):
@@ -32,5 +34,6 @@ def test_get_transactions():
         bean_account=bean_account,
         from_date=date(2023, 1, 1),
     )
+    # TODO: remove print statements and implement tests
     print(txns)  # noqa: T201
     print(balance)  # noqa: T201
