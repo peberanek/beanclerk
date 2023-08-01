@@ -22,7 +22,7 @@ Beanclerk is an extension for [Beancount](https://github.com/beancount/beancount
 
 ### Existing importers
 
-Currently, there is 1 built-in importer for [Fio banka](https://www.fio.cz/). I plan to add another for [Banka Creditas](https://www.creditas.cz/), and, maybe, for some crypto exchanges. (All importers may move into separate repos in the future so the user may install only those they actually need).
+Beanclerk provides 2 built-in importers for [Fio banka](https://www.fio.cz/) and for [Banka Creditas](https://www.creditas.cz/). I plan to add another for some crypto exchanges. (All importers may move into separate repos in the future so you can install only those you actually need). Moreover, Beanclerk is designed in such a way to import importers (Python classes) from your working directory (this feature is not enabled yet).
 
 ### Notes
 

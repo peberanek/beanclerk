@@ -23,7 +23,7 @@ class ApiImporter(ApiImporterProtocol):
         """Initialize the importer.
 
         Args:
-            token (str): _description_
+            token (str): API token
         """
         self._token = token
 
@@ -34,6 +34,7 @@ class ApiImporter(ApiImporterProtocol):
         to_date: date,
     ) -> TransactionReport:
         client = fio_banka.Account(self._token)
+        # TODO: handle exceptions
         statement = client.periods(from_date, to_date, fio_banka.TransactionsFmt.JSON)
 
         txns: list[Transaction] = []
