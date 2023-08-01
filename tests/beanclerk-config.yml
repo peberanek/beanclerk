@@ -1,6 +1,7 @@
 ---
-# `vars` section is completely optional. It may be useful for defining YAML
-# anchors (https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)
+# `vars` section is optional and may define any data structure you need. It
+# may be useful for defining YAML anchors
+# (https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/)
 # to reuse common values.
 vars:
   fio_importer: &fio_importer "beanclerk.importers.fio_banka.ApiImporter"
@@ -8,19 +9,19 @@ vars:
 # A Beancount ledger; path may be relative or absolute, may include ~ or env vars.
 input_file: "${TEST_DIR}/ledger.beancount"
 
-accounts: # Acounts to import data to.
+accounts: # Acounts managed by Beanclerk
   - account: "Assets:Banks:Fio:Checking" # an existing Beancount account
-    # `importer` points to an importable Python class that implements ApiImporterProtocol
+    # `importer` points to an importable class that implements ApiImporterProtocol
     importer: "beanclerk.importers.fio_banka.ApiImporter"
     # `account` and `importer` are required. All other keys provide an importer-specific
-    # configuration. (It must be described by the importer.)
+    # configuration. (It should be documented by the importer.)
     token: "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF"
 
   - account: "Assets:Banks:Fio:Savings"
     importer: *fio_importer # YAML alias (points to a YAML anchor)
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
-# `categorization_rules` section is optional, however, Beanclerk prompts the user
+# `categorization_rules` section is optional, however, Beanclerk prompts you
 # once it encounters an uncategorized transaction.
 categorization_rules:
   # 1 example rule
@@ -30,7 +31,7 @@ categorization_rules:
       metadata:
         ks: "05\\d{2}" # supports regex
     # Missing values to be added to the transaction:
-    account: "Expenses:Todo" # an arbitrary Beancount account (may or may not exist)
+    account: "Expenses:Todo" # an arbitrary Beancount account (it may or may not exist)
     flag: "!" # optional (https://github.com/beancount/beancount/blob/master/beancount/core/flags.py)
     payee: "My payee" # optional
     narration: "My narration" # optional
