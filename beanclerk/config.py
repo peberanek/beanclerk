@@ -19,7 +19,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 from pydantic_settings import BaseSettings
 
-from .bean_helpers import check_account_name
+from .bean_helpers import validate_account_name
 from .exceptions import ConfigError
 from .importers import ApiImporterProtocol
 
@@ -42,7 +42,7 @@ class AccountConfig(BaseModel):
     @field_validator("account")
     def name_is_valid(cls, name: str) -> str:
         """Validate account name."""
-        check_account_name(name)
+        validate_account_name(name)
         return name
 
 
@@ -50,6 +50,18 @@ class MatchCategories(_BaseModelStrict):
     """Match categories model."""
 
     metadata: dict[str, str]
+
+    @field_validator("metadata")
+    def metadata_is_valid(cls, metadata: dict[str, str]) -> dict[str, str]:
+        """Validate metadata."""
+        if not metadata:
+            raise ValueError("No patterns in metadata")
+        for pattern in metadata.values():
+            if pattern == "":
+                raise ValueError("Dangerous pattern: empty string matches everything")
+            if pattern.startswith("|"):
+                raise ValueError("Dangerous pattern: regex '|...' matches everything")
+        return metadata
 
 
 class CategorizationRule(_BaseModelStrict):
