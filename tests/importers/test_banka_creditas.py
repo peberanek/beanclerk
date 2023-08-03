@@ -1,39 +1,58 @@
 from datetime import date
+from decimal import Decimal
 
 import pytest
+from beancount.core.data import Amount, Posting, Transaction
 
-import beanclerk.importers.banka_creditas
-from beanclerk.importers.banka_creditas import get_transactions
+from beanclerk.importers.banka_creditas import ApiImporter
 
-from ..conftest import TOP_DIR
-
-pytestmark = pytest.mark.skip(reason="Requires rework")
+pytestmark = pytest.mark.usefixtures("_mock_creditas_api_importer")
 
 
-@pytest.fixture()
-def _mock__get_transactions(monkeypatch: pytest.MonkeyPatch):
-    def mock__get_transactions(*args, **kwargs) -> bytes:
-        with (TOP_DIR / "importers" / "banka_creditas_transactions.xml").open(
-            "rb",
-        ) as file:
-            return file.read()
+class TestApiImporter:
+    """Test ApiImporter."""
 
-    monkeypatch.setattr(
-        beanclerk.importers.banka_creditas,
-        "_get_transactions",
-        mock__get_transactions,
+    IMPORTER = ApiImporter(
+        token="testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG",
+        account_id="testId0kq95qeeazfnjpfzq89cuytya7tq4awu3r",
     )
 
-
-@pytest.mark.usefixtures("_mock__get_transactions")
-def test_get_transactions():
-    bean_account = "Assets:Account"
-    txns, balance = get_transactions(
-        token="testkey53mtnzb4hbbnguieebvexzu62q3bvh2imwn9xtyfgzz2z7udwymj38g26",
-        account_id="testid0kq95qeeazfnjpfzq89cuytya7tq4awu3r",
-        bean_account=bean_account,
-        from_date=date(2023, 1, 1),
-    )
-    # TODO: remove print statements and implement tests
-    print(txns)  # noqa: T201
-    print(balance)  # noqa: T201
+    def test_get_transactions(self):
+        """Test get_transactions."""
+        bean_account = "Assets:Account"
+        txns, balance = self.IMPORTER.fetch_transactions(
+            bean_account=bean_account,
+            from_date=date(2023, 1, 1),
+            to_date=date(2023, 1, 1),
+        )
+        assert balance.number == Decimal("1000.10")
+        assert balance.currency == "CZK"
+        assert len(txns) == 1
+        assert txns[0] == Transaction(
+            meta={
+                "id": "RLZ-1000000000",
+                "account_id": "1234567890",
+                "bank_id": "0800",
+                "ks": "2",
+                "vs": "0",
+                "ss": "1",
+                "remittance_info": "Zprava pro prijemce",
+                "executor": "Zak, Pavel",
+            },
+            date=date(2023, 1, 1),
+            flag="!",
+            payee=None,
+            narration="",
+            tags=frozenset(),
+            links=frozenset(),
+            postings=[
+                Posting(
+                    account="Assets:Account",
+                    units=Amount(Decimal("100.99"), "CZK"),
+                    cost=None,
+                    price=None,
+                    flag=None,
+                    meta={},
+                ),
+            ],
+        )

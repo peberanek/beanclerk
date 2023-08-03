@@ -38,12 +38,9 @@ _ISO_DATE_FMT: str = "YYYY-MM-DD"
 
 
 class Date(click.ParamType):
-    """A convenience date type for Click.
+    """A convenience date type for Click."""
 
-    Converts dates to a date (instead of datetime).
-    """
-
-    name = "date"
+    name = _ISO_DATE_FMT
 
     def convert(self, value, param, ctx):  # noqa: D102
         if isinstance(value, date):
@@ -52,23 +49,15 @@ class Date(click.ParamType):
             return date.fromisoformat(value)
         except ValueError:
             self.fail(
-                f"'{value}' is not a valid date format ({_ISO_DATE_FMT})",
+                f"'{value}' is not a valid ISO date format: {_ISO_DATE_FMT}",
                 param,
                 ctx,
             )
 
 
 @cli.command("import")
-@click.option(
-    "--from-date",
-    type=Date(),
-    help=f"The first date to import ({_ISO_DATE_FMT}).",
-)
-@click.option(
-    "--to-date",
-    type=Date(),
-    help=f"The last date to import ({_ISO_DATE_FMT}).",
-)
+@click.option("--from-date", type=Date(), help="The first date to import.")
+@click.option("--to-date", type=Date(), help="The last date to import.")
 @click.pass_context
 def import_(ctx: click.Context, from_date: Date, to_date: Date) -> None:
     """Import transactions and check the current balance."""

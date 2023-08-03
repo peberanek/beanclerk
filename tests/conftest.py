@@ -6,6 +6,8 @@ from pathlib import Path
 import fio_banka
 import pytest
 
+from beanclerk.importers.banka_creditas import ApiImporter
+
 TOP_DIR = Path(os.path.realpath(__file__)).parent
 
 
@@ -18,6 +20,23 @@ def _mock_fio_banka(monkeypatch: pytest.MonkeyPatch):
             return file.read()
 
     monkeypatch.setattr(fio_banka.Account, "_request", mock__request)
+
+
+@pytest.fixture()
+def _mock_creditas_api_importer(monkeypatch: pytest.MonkeyPatch):
+    """Mock beanclerk.importers.banka_creditas.ApiImporter.
+
+    creditas pkg does not seem to be easy to mock, mock some of the importer
+    methods instead.
+    """
+
+    def mock__fetch_transactions(*args, **kwargs) -> bytes:
+        with (TOP_DIR / "importers" / "banka_creditas_transactions.xml").open(
+            "rb",
+        ) as file:
+            return file.read()
+
+    monkeypatch.setattr(ApiImporter, "_fetch_transactions", mock__fetch_transactions)
 
 
 @pytest.fixture()

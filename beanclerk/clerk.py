@@ -25,10 +25,10 @@ from rich import print as rprint
 from rich.prompt import Prompt
 
 from .bean_helpers import (
-    check_account_name,
     create_posting,
     create_transaction,
     filter_entries,
+    validate_account_name,
 )
 from .config import CategorizationRule, Config, load_config, load_importer
 from .exceptions import ClerkError
@@ -51,7 +51,7 @@ def find_last_import_date(entries: list[Directive], account_name: str) -> date |
     Returns:
         date | None
     """
-    check_account_name(account_name)
+    validate_account_name(account_name)
     txn_postings = filter_entries(
         postings_by_account(entries)[account_name],
         TxnPosting,
@@ -80,7 +80,7 @@ def transaction_exists(
     Returns:
         bool
     """
-    check_account_name(account_name)
+    validate_account_name(account_name)
     txn_postings = filter_entries(
         postings_by_account(entries)[account_name],
         TxnPosting,
@@ -109,7 +109,7 @@ def compute_balance(
     Returns:
         Amount: account balance
     """
-    check_account_name(account_name)
+    validate_account_name(account_name)
     if not re.match(r"^[A-Z]{3}$", currency):
         raise ValueError(f"'{currency}' is not a valid currency code")
     return compute_postings_balance(
@@ -132,8 +132,6 @@ def find_categorization_rule(
         config (Config): Beanclerk config
 
     Raises:
-        ClerkError: if a categorization rule is invalid.
-        ClerkError: if a dangerous pattern is used in a categorization rule.
         ClerkError: if an unexpected action is chosen by the user.
 
     Returns:
@@ -142,19 +140,8 @@ def find_categorization_rule(
     while True:
         if config.categorization_rules:
             for rule in config.categorization_rules:
-                if len(rule.matches.metadata) == 0:
-                    raise ClerkError(
-                        f"Categorization rule: {rule}\n"
-                        "Sanity check failed: no patterns to match",
-                    )
                 num_matches = 0
                 for key, pattern in rule.matches.metadata.items():
-                    if pattern == "":
-                        raise ClerkError(
-                            f"Categorization rule: {rule}\n"
-                            'Dangerous pattern "" matches everything. '
-                            'Use ".*" or "^$" instead.',
-                        )
                     if (
                         key in transaction.meta
                         and re.search(pattern, transaction.meta[key]) is not None

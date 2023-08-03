@@ -79,8 +79,8 @@ def filter_entries(entries: list[Directive], cls: D) -> Generator[D, None, None]
             yield entry
 
 
-def check_account_name(name: str) -> None:
-    """Check a Beanount account name.
+def validate_account_name(name: str) -> None:
+    """Validate a Beanount account name.
 
     Args:
         name (str): a Beancount account name

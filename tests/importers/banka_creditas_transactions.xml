@@ -47,7 +47,7 @@
             </TxsSummry>
             <Ntry>
                 <NtryRef>RLZ-1000000000</NtryRef>
-                <Amt Ccy="CZK">1</Amt>
+                <Amt Ccy="CZK">100.99</Amt>
                 <CdtDbtInd>CRDT</CdtDbtInd>
                 <RvslInd>false</RvslInd>
                 <Sts>BOOK</Sts>
