@@ -119,7 +119,7 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
                 meta=meta,
             ),
         )
-        txns.sort(key=lambda txn: txn.date)
+    txns.sort(key=lambda txn: txn.date)
     return (txns, balance)
 
 
