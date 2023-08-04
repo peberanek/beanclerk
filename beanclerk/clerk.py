@@ -240,6 +240,29 @@ def append_entry_to_file(entry: Directive, filepath: Path) -> None:
         print_entry(entry, file=f)
 
 
+def _clr_style(style, msg):
+    # https://rich.readthedocs.io/en/stable/style.html#styles
+    # https://rich.readthedocs.io/en/stable/appendix/colors.html#appendix-colors
+    return f"[{style}]{msg}[/{style}]"
+
+
+def _clr_br_yellow(msg):
+    return _clr_style("bright_yellow", msg)
+
+
+def _clr_br_green(msg):
+    return _clr_style("bright_green", msg)
+
+
+def _clr_blue(msg):
+    return _clr_style("blue", msg)
+
+
+def _clr_default(msg):
+    # Use 'default' color managed by the terminal
+    return _clr_style("default", msg)
+
+
 def print_import_status(
     new_txns: int,
     importer_balance: Decimal,
@@ -254,10 +277,16 @@ def print_import_status(
     """
     diff = importer_balance - bean_balance
     if diff == 0:
-        balance_status = f"OK: {importer_balance}"
+        balance_status = f"{_clr_br_green('OK:')} {importer_balance}"
     else:
-        balance_status = f"NOT OK: {importer_balance} (diff: {diff})"
-    rprint(f"New transactions: {new_txns}, balance {balance_status}")
+        balance_status = (
+            f"{_clr_br_yellow('NOT OK:')} {importer_balance} (diff: {diff})"
+        )
+    if new_txns == 0:
+        txns_status = f"{_clr_default(new_txns)}"
+    else:
+        txns_status = f"{_clr_blue(new_txns)}"
+    rprint(f"New transactions: {txns_status}, balance {balance_status}")
 
 
 def import_transactions(
