@@ -286,7 +286,7 @@ def print_import_status(
         txns_status = f"{_clr_default(new_txns)}"
     else:
         txns_status = f"{_clr_blue(new_txns)}"
-    rprint(f"New transactions: {txns_status}, balance {balance_status}")
+    rprint(f"  New transactions: {txns_status}, balance {balance_status}")
 
 
 def import_transactions(
