@@ -27,7 +27,7 @@ dependencies = [
   "beancount~=2.3",
   "click~=8.1",
   "creditas==1.0.0.*",      # https://github.com/peberanek/creditas/blob/main/README.md#versioning
-  "fio-banka~=1.0",
+  "fio-banka~=2.0",
   "lxml~=4.9",
   "pydantic-settings~=2.0",
   "pydantic~=2.0",
