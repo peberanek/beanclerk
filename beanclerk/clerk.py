@@ -13,6 +13,7 @@ Todo:
 
 import copy
 import re
+import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -306,6 +307,10 @@ def import_transactions(
         ClerkError: raised if the initial import date cannot be determined
     """
     config = load_config(config_file)
+
+    if config.insert_pythonpath:
+        sys.path.insert(0, str(config.input_file.parent))
+
     entries, errors, _ = load_file(config.input_file)
     if errors != []:
         # TODO: format errors via beancount.parser.printer.format_errors

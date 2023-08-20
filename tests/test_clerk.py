@@ -5,6 +5,7 @@ Todo:
     multiple tests, share the same test data). Improve them.
     * Test fn append_entry_to_file.
 """
+import shutil
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -24,6 +25,9 @@ from beanclerk.clerk import (
     transaction_exists,
 )
 from beanclerk.config import Config, load_config
+from beanclerk.exceptions import ConfigError
+
+from .conftest import TOP_DIR
 
 CZK = "CZK"
 
@@ -141,3 +145,48 @@ def test_import_transactions(config_file: Path, ledger: Path):
     )
     for txn_id in ("10000000000", "10000000001", "10000000002"):
         assert transaction_exists(entries, account, txn_id)
+
+
+@pytest.fixture()
+def _local_importer(tmp_path) -> None:
+    shutil.copy(TOP_DIR / "importers" / "local_importers.py", tmp_path)
+
+
+@pytest.mark.parametrize(
+    "should_pass",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(reason="Does not raise import error"),
+        ),
+    ],
+    ids=["pass", "fail"],
+)
+@pytest.mark.usefixtures("_local_importer", "_mock_prompt", "ledger")
+def test_local_importer(
+    config_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    should_pass: bool,  # noqa: FBT001
+):
+    def _import_transactions():
+        import_transactions(
+            config_file,
+            from_date=date(2023, 1, 1),
+            to_date=date(2023, 1, 1),
+        )
+
+    # TODO: use a separate config file instead of env vars for more precise
+    #   testing.
+    monkeypatch.setenv(
+        "BEANCLERK_ACCOUNTS",
+        '[{"account": "Assets:Banks:Fio:Checking", "importer": "local_importers.LocalImporter"}]',  # noqa: E501
+    )
+    if should_pass:
+        monkeypatch.setenv("BEANCLERK_INSERT_PYTHONPATH", "True")
+        _import_transactions()
+    else:
+        # FIXME: When monkeypatch sets BEANCLERK_INSERT_PYTHONPATH in the `if`
+        #   clause, ConfigError is not raised here. Investigate.
+        with pytest.raises(ConfigError, match="Cannot import"):
+            _import_transactions()

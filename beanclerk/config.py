@@ -88,6 +88,7 @@ class Config(BaseSettings):
 
     vars: Any = None  # noqa: A003
     input_file: Path
+    insert_pythonpath: bool = False
     accounts: list[AccountConfig]
     categorization_rules: list[CategorizationRule] | None = None
 
