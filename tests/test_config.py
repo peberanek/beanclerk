@@ -5,7 +5,7 @@ import pydantic
 import pytest
 
 from beanclerk.config import Config, load_config, load_importer
-from beanclerk.importers.fio_banka import ApiImporter
+from beanclerk.importers import ApiImporterProtocol
 
 _valid_accounts = [
     {
@@ -109,4 +109,4 @@ def test_load_importer(config_file, ledger):
     config = load_config(config_file)
     for account_config in config.accounts:
         importer = load_importer(account_config)  # raises on invalid config
-        assert isinstance(importer, ApiImporter)
+        assert isinstance(importer, ApiImporterProtocol)
