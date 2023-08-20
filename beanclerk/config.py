@@ -6,6 +6,7 @@ Notes:
 
 Todo:
     * Add missing field validators.
+        * Validate importer path.
 """
 # Disabling due to Pydantic notation (`cls` instead of `self`).
 # ruff: noqa: N805
@@ -17,7 +18,11 @@ from typing import Any
 
 import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 from .bean_helpers import validate_account_name
 from .exceptions import ConfigError
@@ -89,7 +94,11 @@ class Config(BaseSettings):
     # fields not present in the config file
     config_file: Path
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = SettingsConfigDict(
+        extra="forbid",
+        env_file=".env",
+        env_prefix="beanclerk_",  # case-insensitive
+    )
 
     @field_validator("input_file")
     def input_file_exists(cls, input_file: Path) -> Path:
@@ -105,6 +114,19 @@ class Config(BaseSettings):
         if not input_file.exists():
             raise ValueError(f"Input file '{input_file}' does not exist")
         return input_file
+
+    @classmethod
+    def settings_customise_sources(  # noqa: D102
+        cls,
+        settings_cls: type[BaseSettings],  # noqa: ARG003
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        # Change the default order of priority:
+        # https://docs.pydantic.dev/latest/usage/pydantic_settings/#customise-settings-sources
+        return (env_settings, dotenv_settings, init_settings, file_secret_settings)
 
 
 def load_config(filepath: Path) -> Config:
