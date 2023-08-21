@@ -52,7 +52,7 @@ def test_find_last_import_date(entries: list[Transaction]) -> None:
     """Test find_last_import_date."""
     account = entries[0].postings[0].account
     assert find_last_import_date([], account) is None
-    assert find_last_import_date(entries, account) == date(2023, 1, 2) is not None
+    assert find_last_import_date(entries, account) == date(2023, 1, 2)
     assert find_last_import_date(list(entries[-1]), account) is None
     assert find_last_import_date(entries, "Assets:Nonexistent") is None
 
@@ -61,7 +61,7 @@ def test_transaction_exists(entries: list[Transaction]) -> None:
     """Test transaction_exists."""
     account = entries[0].postings[0].account
     assert not transaction_exists([], account, "0")
-    assert transaction_exists(entries, account, "0") is not None
+    assert transaction_exists(entries, account, "0")
     assert not transaction_exists(entries, account, "-1")
 
 
