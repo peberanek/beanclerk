@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any
 
 from beancount.core.data import Amount, Transaction
-from beancount.core.flags import FLAG_WARNING
 from lxml import etree
 
 from ..bean_helpers import create_posting, create_transaction
@@ -114,7 +113,6 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
                         raise_if_none=True,
                     ),  # type: ignore[arg-type]
                 ),
-                flag=FLAG_WARNING,  # FIXME: remove?
                 postings=[
                     create_posting(
                         account=bean_account,
