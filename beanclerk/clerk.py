@@ -266,8 +266,8 @@ def _clr_default(msg):
 
 def print_import_status(
     new_txns: int,
-    importer_balance: Decimal,
-    bean_balance: Decimal,
+    importer_balance: Amount,
+    bean_balance: Amount,
 ) -> None:
     """Print import status to stdout.
 
@@ -276,7 +276,7 @@ def print_import_status(
         importer_balance (Decimal): balance reported by the importer
         bean_balance (Decimal): balance computed from the Beancount input file
     """
-    diff = importer_balance - bean_balance
+    diff: Decimal = importer_balance.number - bean_balance.number
     if diff == 0:
         balance_status = f"{_clr_br_green('OK:')} {importer_balance}"
     else:
@@ -317,7 +317,7 @@ def import_transactions(
         raise ClerkError(f"Errors in the input file: {errors}")
 
     for account_config in config.accounts:
-        rprint(f"Importing transactions for account: '{account_config.account}'")
+        rprint(f"Account: '{account_config.account}'")
         if from_date is None:
             # TODO: sort entries by date
             last_date = find_last_import_date(entries, account_config.account)
@@ -351,6 +351,6 @@ def import_transactions(
 
         print_import_status(
             new_txns,
-            balance.number,
-            compute_balance(entries, account_config.account, balance.currency).number,
+            balance,
+            compute_balance(entries, account_config.account, balance.currency),
         )
