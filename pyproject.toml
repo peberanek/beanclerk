@@ -21,6 +21,8 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Topic :: Office/Business :: Financial :: Accounting",
 ]
+# TODO: Try out https://github.com/renovatebot/renovate. It might work well
+# with pipenv (instead of using a custom script and unlocked deps).
 # Always sync with additional dependencies for Mypy in pyproject.toml
 dependencies = [
   "PyYAML~=6.0",

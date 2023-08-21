@@ -3,12 +3,18 @@
 This module provides operations consumed by the CLI.
 
 Todo:
+    * check each new txn has `id` in its metadata (without this we can't check
+    for duplicates)
     * handle exceptions
     * Python docs recommend to use utf-8 encoding for reading and writing files
     * validate txns coming from importers:
         * check that txns have only 1 posting
         * check that txns have id in their metadata
     * Test fn append_entry_to_file.
+    * Check txns from an importer have only 1 posting (don't implement this until
+    a more complex use case - like importing from an crypto exchange - is implemented).
+    * Try out Beancount v3: https://groups.google.com/g/beancount/c/LVBQ4cD0PYc.
+    According to the thread, it should be stable enough.
 """
 
 import copy
@@ -46,9 +52,6 @@ def find_last_import_date(entries: list[Directive], account_name: str) -> date |
         entries (list[Directive]): a list of Beancount directives
         account_name (str): Beancount account name
 
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-
     Returns:
         date | None
     """
@@ -75,9 +78,6 @@ def transaction_exists(
         account_name (str): Beancount account name
         txn_id (str): transaction ID (`id` key in its metadata)
 
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-
     Returns:
         bool
     """
@@ -102,10 +102,6 @@ def compute_balance(
         entries (list[Directive]): a list of Beancount directives
         account_name (str): Beancount account name
         currency (str): currency ISO code (e.g. 'USD')
-
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-        ValueError: if currency is not a valid ISO code
 
     Returns:
         Amount: account balance

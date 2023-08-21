@@ -126,9 +126,15 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
 class ApiImporterProtocol(abc.ABC):
     """API Importer Protocol for custom importers.
 
-    All API importers must comply with this interface. Make sure to implement
-    all methods decorated with `@abc.abstractmethod`. There are no restrictions
-    on other methods, variables or properties.
+    All API importers must comply with this interface.
+
+    Abstract methods:
+        fetch_transactions: fetch transactions from the API
+
+    Each transaction should have `id` key in its metadata representing a unique
+    transaction ID (for the given account). Beanclerk relies on this key when
+    checking for duplicates and determining the date of the last imported
+    transaction.
     """
 
     @abc.abstractmethod

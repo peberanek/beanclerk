@@ -5,6 +5,7 @@ Todo:
 
 docs:
     https://www.fio.cz/bank-services/internetbanking-api
+    https://github.com/peberanek/fio-banka
 """
 
 from datetime import date

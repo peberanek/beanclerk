@@ -5,6 +5,7 @@ Todo:
 
 docs:
     https://www.creditas.cz/firma/creditas-api/
+    https://github.com/peberanek/creditas
 """
 
 import base64

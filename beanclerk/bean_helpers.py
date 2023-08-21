@@ -84,9 +84,6 @@ def validate_account_name(name: str) -> None:
 
     Args:
         name (str): a Beancount account name
-
-    Raises:
-        ValueError: if the account name is invalid
     """
     if not is_valid(name):
         raise ValueError(f"'{name}' is not a valid Beancount account name")
