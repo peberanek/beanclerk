@@ -14,7 +14,7 @@ import fio_banka
 from beancount.core.data import Amount, Transaction
 
 from ..bean_helpers import create_posting, create_transaction
-from . import ApiImporterProtocol, TransactionReport, prepare_meta
+from . import ApiImporterProtocol, TransactionReport, refine_meta
 
 
 class ApiImporter(ApiImporterProtocol):
@@ -49,7 +49,7 @@ class ApiImporter(ApiImporterProtocol):
                             units=Amount(txn.amount, txn.currency),
                         ),
                     ],
-                    meta=prepare_meta(
+                    meta=refine_meta(
                         {
                             "id": txn.transaction_id,
                             "account_id": txn.account_id,
