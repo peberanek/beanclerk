@@ -40,7 +40,7 @@ class TestApiImporter:
                 "executor": "Zak, Pavel",
             },
             date=date(2023, 1, 1),
-            flag="!",
+            flag="*",
             payee=None,
             narration="",
             tags=frozenset(),

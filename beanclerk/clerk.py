@@ -3,16 +3,23 @@
 This module provides operations consumed by the CLI.
 
 Todo:
+    * check each new txn has `id` in its metadata (without this we can't check
+    for duplicates)
     * handle exceptions
     * Python docs recommend to use utf-8 encoding for reading and writing files
     * validate txns coming from importers:
         * check that txns have only 1 posting
         * check that txns have id in their metadata
     * Test fn append_entry_to_file.
+    * Check txns from an importer have only 1 posting (don't implement this until
+    a more complex use case - like importing from an crypto exchange - is implemented).
+    * Try out Beancount v3: https://groups.google.com/g/beancount/c/LVBQ4cD0PYc.
+    According to the thread, it should be stable enough.
 """
 
 import copy
 import re
+import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -45,9 +52,6 @@ def find_last_import_date(entries: list[Directive], account_name: str) -> date |
         entries (list[Directive]): a list of Beancount directives
         account_name (str): Beancount account name
 
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-
     Returns:
         date | None
     """
@@ -74,9 +78,6 @@ def transaction_exists(
         account_name (str): Beancount account name
         txn_id (str): transaction ID (`id` key in its metadata)
 
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-
     Returns:
         bool
     """
@@ -101,10 +102,6 @@ def compute_balance(
         entries (list[Directive]): a list of Beancount directives
         account_name (str): Beancount account name
         currency (str): currency ISO code (e.g. 'USD')
-
-    Raises:
-        ValueError: if account_name is not a valid Beancount account name
-        ValueError: if currency is not a valid ISO code
 
     Returns:
         Amount: account balance
@@ -240,10 +237,33 @@ def append_entry_to_file(entry: Directive, filepath: Path) -> None:
         print_entry(entry, file=f)
 
 
+def _clr_style(style, msg):
+    # https://rich.readthedocs.io/en/stable/style.html#styles
+    # https://rich.readthedocs.io/en/stable/appendix/colors.html#appendix-colors
+    return f"[{style}]{msg}[/{style}]"
+
+
+def _clr_br_yellow(msg):
+    return _clr_style("bright_yellow", msg)
+
+
+def _clr_br_green(msg):
+    return _clr_style("bright_green", msg)
+
+
+def _clr_blue(msg):
+    return _clr_style("blue", msg)
+
+
+def _clr_default(msg):
+    # Use 'default' color managed by the terminal
+    return _clr_style("default", msg)
+
+
 def print_import_status(
     new_txns: int,
-    importer_balance: Decimal,
-    bean_balance: Decimal,
+    importer_balance: Amount,
+    bean_balance: Amount,
 ) -> None:
     """Print import status to stdout.
 
@@ -252,12 +272,18 @@ def print_import_status(
         importer_balance (Decimal): balance reported by the importer
         bean_balance (Decimal): balance computed from the Beancount input file
     """
-    diff = importer_balance - bean_balance
+    diff: Decimal = importer_balance.number - bean_balance.number
     if diff == 0:
-        balance_status = f"OK: {importer_balance}"
+        balance_status = f"{_clr_br_green('OK:')} {importer_balance}"
     else:
-        balance_status = f"NOT OK: {importer_balance} (diff: {diff})"
-    rprint(f"New transactions: {new_txns}, balance {balance_status}")
+        balance_status = (
+            f"{_clr_br_yellow('NOT OK:')} {importer_balance} (diff: {diff})"
+        )
+    if new_txns == 0:
+        txns_status = f"{_clr_default(new_txns)}"
+    else:
+        txns_status = f"{_clr_blue(new_txns)}"
+    rprint(f"  New transactions: {txns_status}, balance {balance_status}")
 
 
 def import_transactions(
@@ -277,13 +303,17 @@ def import_transactions(
         ClerkError: raised if the initial import date cannot be determined
     """
     config = load_config(config_file)
+
+    if config.insert_pythonpath:
+        sys.path.insert(0, str(config.input_file.parent))
+
     entries, errors, _ = load_file(config.input_file)
     if errors != []:
         # TODO: format errors via beancount.parser.printer.format_errors
         raise ClerkError(f"Errors in the input file: {errors}")
 
     for account_config in config.accounts:
-        rprint(f"Importing transactions for account: '{account_config.account}'")
+        rprint(f"Account: '{account_config.account}'")
         if from_date is None:
             # TODO: sort entries by date
             last_date = find_last_import_date(entries, account_config.account)
@@ -317,6 +347,6 @@ def import_transactions(
 
         print_import_status(
             new_txns,
-            balance.number,
-            compute_balance(entries, account_config.account, balance.currency).number,
+            balance,
+            compute_balance(entries, account_config.account, balance.currency),
         )

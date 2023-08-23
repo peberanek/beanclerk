@@ -5,6 +5,7 @@ Todo:
 
 docs:
     https://www.fio.cz/bank-services/internetbanking-api
+    https://github.com/peberanek/fio-banka
 """
 
 from datetime import date
@@ -13,7 +14,7 @@ import fio_banka
 from beancount.core.data import Amount, Transaction
 
 from ..bean_helpers import create_posting, create_transaction
-from . import ApiImporterProtocol, TransactionReport, prepare_meta
+from . import ApiImporterProtocol, TransactionReport, refine_meta
 
 
 class ApiImporter(ApiImporterProtocol):
@@ -48,10 +49,10 @@ class ApiImporter(ApiImporterProtocol):
                             units=Amount(txn.amount, txn.currency),
                         ),
                     ],
-                    meta=prepare_meta(
+                    meta=refine_meta(
                         {
                             "id": txn.transaction_id,
-                            "account_id": txn.account,
+                            "account_id": txn.account_id,
                             "account_name": txn.account_name,
                             "bank_id": txn.bank_id,
                             "bank_name": txn.bank_name,
@@ -59,7 +60,7 @@ class ApiImporter(ApiImporterProtocol):
                             "vs": txn.vs,
                             "ss": txn.ss,
                             "user_identification": txn.user_identification,
-                            "remittance_info": txn.recipient_message,
+                            "remittance_info": txn.remittance_info,
                             "type": txn.type,
                             "executor": txn.executor,
                             "specification": txn.specification,

@@ -9,7 +9,7 @@ class BeanclerkError(Exception):
 
 
 class ConfigError(BeanclerkError):
-    """Beanclerk configuration is invalid."""
+    """Config is invalid."""
 
     def __init__(self, message: str) -> None:
         """Initialize the exception.
@@ -17,11 +17,11 @@ class ConfigError(BeanclerkError):
         Args:
             message (str): an error message
         """
-        super().__init__(f"Cannot load config file: {message}")
+        super().__init__(f"Config is invalid: {message}")
 
 
 class ClerkError(BeanclerkError):
-    """Clerk cannot operate."""
+    """Clerk cannot continue."""
 
     def __init__(self, message: str) -> None:
         """Initialize the exception.
@@ -29,4 +29,16 @@ class ClerkError(BeanclerkError):
         Args:
             message (str): an error message
         """
-        super().__init__(f"Clerk error: {message}")
+        super().__init__(f"Clerk cannot continue: {message}")
+
+
+class ImporterError(BeanclerkError):
+    """Cannot import data."""
+
+    def __init__(self, message: str) -> None:
+        """Initialize the exception.
+
+        Args:
+            message (str): an error message
+        """
+        super().__init__(f"Cannot import data: {message}")

@@ -6,7 +6,6 @@ from decimal import Decimal
 from typing import Any
 
 from beancount.core.data import Amount, Transaction
-from beancount.core.flags import FLAG_WARNING
 from lxml import etree
 
 from ..bean_helpers import create_posting, create_transaction
@@ -14,27 +13,32 @@ from ..bean_helpers import create_posting, create_transaction
 TransactionReport = tuple[list[Transaction], Amount]
 
 
-def prepare_meta(d: dict[str, Any]) -> dict[str, str]:
-    """Return a dict of metadata for a Beancount transaction.
+def refine_meta(meta: dict[str, Any]) -> dict[str, str]:
+    """Return a dict of refined metadata for a Beancount transaction.
+
+    Refinements:
+        * removes empty strings
+        * removes None values
+        * converts all values to strings
 
     Args:
-        d (dict[str, Any]): a dict of values
+        meta (dict[str, Any]): a dict of transaction metadata
 
     Returns:
-        dict[str, str]: a dict of metadata
+        dict[str, str]: a new dict of transaction metadata
     """
-    meta = {}
-    for k, v in d.items():
+    new_meta = {}
+    for k, v in meta.items():
         if not (v is None or v == ""):
-            meta[k] = str(v)
-    return meta
+            new_meta[k] = str(v)
+    return new_meta
 
 
 def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
     """Return a tuple with a list of Beancount transactions and the current balance.
 
     Args:
-        xml (bytes): bytes with the XML data (camt.053.001.02)
+        xml (bytes): XML data (camt.053.001.02) as bytes
             https://cbaonline.cz/formaty-xml-pro-vzajemnou-komunikaci-bank-s-klienty
         bean_account (str): a Beancount account name
 
@@ -82,7 +86,7 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
         else:
             ind = "Dbtr"
         details = "./NtryDtls/TxDtls"
-        meta = prepare_meta(
+        meta = refine_meta(
             {
                 "id": get_text(entry, "./NtryRef", raise_if_none=True),
                 "account_id": get_text(
@@ -109,7 +113,6 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
                         raise_if_none=True,
                     ),  # type: ignore[arg-type]
                 ),
-                flag=FLAG_WARNING,
                 postings=[
                     create_posting(
                         account=bean_account,
@@ -119,16 +122,22 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
                 meta=meta,
             ),
         )
-        txns.sort(key=lambda txn: txn.date)
+    txns.sort(key=lambda txn: txn.date)
     return (txns, balance)
 
 
 class ApiImporterProtocol(abc.ABC):
     """API Importer Protocol for custom importers.
 
-    All API importers must comply with this interface. Make sure to implement
-    all methods decorated with `@abc.abstractmethod`. There are no restrictions
-    on other methods, variables or properties.
+    All API importers must comply with this interface.
+
+    Abstract methods:
+        fetch_transactions: fetch transactions from the API
+
+    Each transaction should have `id` key in its metadata representing a unique
+    transaction ID (for the given account). Beanclerk relies on this key when
+    checking for duplicates and determining the date of the last imported
+    transaction.
     """
 
     @abc.abstractmethod
