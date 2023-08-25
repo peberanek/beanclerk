@@ -3,11 +3,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
-# TODO: Try out https://github.com/renovatebot/renovate. It might work well
-# with pipenv (instead of using a custom script and unlocked deps).
-#
-# Always sync with additional dependencies for Mypy in .pre-commit-config.yaml
 [packages]
+# Always sync with additional dependencies for Mypy in .pre-commit-config.yaml
 PyYAML = "~=6.0"
 beancount = "~=2.3"
 click = "~=8.1"
