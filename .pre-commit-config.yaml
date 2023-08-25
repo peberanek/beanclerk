@@ -27,4 +27,4 @@ repos:
     hooks:
       - id: mypy
         # Always sync with dependencies in pyproject.toml
-        additional_dependencies: ["types-PyYAML>=6.0,<7"]
+        additional_dependencies: ["types-PyYAML~=6.0"]
