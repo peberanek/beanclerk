@@ -11,7 +11,7 @@ _valid_accounts = [
     {
         "account": "Assets:Bank:Checking",
         "importer": "beanclerk.importers.fio_banka.ApiImporter",
-        "token": "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF",  # noqa: E501
+        "token": "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF",
     },
 ]
 _valid_categorization_rules = [
