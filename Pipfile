@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-# Always sync with additional dependencies for Mypy in .pre-commit-config.yaml
+# Always sync with additional deps for Mypy in .pre-commit-config.yaml
 PyYAML = "~=6.0"
 beancount = "~=2.3"
 click = "~=8.1"
