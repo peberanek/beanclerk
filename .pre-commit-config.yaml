@@ -18,13 +18,10 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-  - repo: https://github.com/psf/black
-    rev: 23.10.1
-    hooks:
-      - id: black
+      - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.6.1
     hooks:
       - id: mypy
-        # Always sync with dependencies in pyproject.toml
-        additional_dependencies: ["types-PyYAML>=6.0,<7"]
+        # Always sync with deps in Pipfile
+        additional_dependencies: ["types-PyYAML~=6.0"]

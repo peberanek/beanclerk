@@ -1,0 +1,24 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+# Always sync with additional deps for Mypy in .pre-commit-config.yaml
+PyYAML = "~=6.0"
+beancount = "~=2.3"
+click = "~=8.1"
+creditas = "==1.0.0.*" # https://github.com/peberanek/creditas/blob/main/README.md#versioning
+fio-banka = "~=2.0"
+lxml = "~=4.9"
+pydantic-settings = "~=2.0"
+pydantic = "~=2.0"
+rich = "~=13.4"
+
+[dev-packages]
+pre-commit = "~=3.3"
+pytest = "~=7.4"
+beanclerk = {editable = true, path = "."}
+
+[requires]
+python_version = "3.11"

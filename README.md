@@ -134,12 +134,14 @@ I started Beanclerk primarily to try out some Python packages and to get better 
 
 Contributions are welcome. As changes the project is still changing rapidly, make sure to create an issue first so we can discuss it.
 
-Set up a development environment for playing with the source code:
+Set up a development environment:
 ```bash
-./build_venv
-source venv/bin/activate
-pre-commit install  # https://pre-commit.com/
+pipenv install --dev
+pipenv run pre-commit install
 ```
+
+> [!NOTE]
+> If you prefer to create the virtual environment in the project's directory, add `PIPENV_VENV_IN_PROJECT=1` into `.env` file. For more info see [Virtualenv mapping caveat](https://pipenv.pypa.io/en/latest/installation/#virtualenv-mapping-caveat).
 
 Run tests:
 ```bash

@@ -323,7 +323,7 @@ def import_transactions(
             from_date = last_date
         if to_date is None:
             # Beancount does not work with times, `date.today()` should be OK.
-            to_date = date.today()  # noqa: DTZ011
+            to_date = date.today()
         importer: ApiImporterProtocol = load_importer(account_config)
         txns, balance = importer.fetch_transactions(
             bean_account=account_config.account,
