@@ -136,7 +136,7 @@ Contributions are welcome. As changes the project is still changing rapidly, mak
 
 Set up a development environment:
 ```bash
-pipenv install --dev
+pipenv install --dev -e .
 pipenv run pre-commit install
 ```
 
