@@ -23,5 +23,4 @@ repos:
     rev: v1.6.1
     hooks:
       - id: mypy
-        # Always sync with deps in Pipfile
         additional_dependencies: ["types-PyYAML~=6.0"]

@@ -21,6 +21,19 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Topic :: Office/Business :: Financial :: Accounting",
 ]
+# Make sure deps (e.g. for Mypy) in Pipfile and .pre-commit-config.yaml are
+# in sync.
+dependencies = [
+  "PyYAML~=6.0",
+  "beancount~=2.3",
+  "click~=8.1",
+  "creditas==1.0.0.*", # https://github.com/peberanek/creditas/blob/main/README.md#versioning
+  "fio-banka~=2.0",
+  "lxml~=4.9",
+  "pydantic-settings~=2.0",
+  "pydantic~=2.0",
+  "rich~=13.4",
+]
 
 [project.scripts]
 bean-clerk = "beanclerk.cli:cli"
