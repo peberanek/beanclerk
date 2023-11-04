@@ -59,7 +59,7 @@ class Date(click.ParamType):
 @click.option("--from-date", type=Date(), help="The first date to import.")
 @click.option("--to-date", type=Date(), help="The last date to import.")
 @click.pass_context
-def import_(ctx: click.Context, from_date: Date, to_date: Date) -> None:
+def import_(ctx: click.Context, from_date: date, to_date: date) -> None:
     """Import transactions and check the current balance."""
     try:
         import_transactions(

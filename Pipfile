@@ -9,6 +9,7 @@ name = "pypi"
 pre-commit = "~=3.3"
 pytest = "~=7.4"
 beanclerk = {file = ".", editable = true}
+types-pyyaml = "~=6.0"
 
 [requires]
 python_version = "3.11"
