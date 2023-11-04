@@ -10,25 +10,25 @@ vars:
 # A Beancount ledger (path may be relative or absolute, may include ~ or env vars)
 input_file: "${TEST_DIR}/ledger.beancount"
 
-# Set this option to `true` if you want to load importers for a local Python
+# Set this option to `true` if you want to load importers for a custom Python
 # module (see `accounts` section for details).
-# insert_pythonpath: true
+#insert_pythonpath: true
 
 accounts:
   # A list of accounts managed by Beanclerk
   #
   # `account`: is an existing Beancount account
   # `importer`: an importable Python class implementing the API Importer
-  #   protocol. If you want to load an importer from a local module (placed
+  #   protocol. If you want to load an importer from a custom module (placed
   #   in the same directory as the `input_file`), set `insert_pythonpath`
   #   to `true`.
-  # All other keys (like e.g. `token`) serve as importer-specific configuration
+  # All other keys (e.g. `token`) serve as importer-specific configuration
   # (they should be described in the importer documentation).
   - account: "Assets:Banks:Fio:Checking"
     importer: "beanclerk.importers.fio_banka.ApiImporter"
     token: "testKeyFVqI4dagXgi1eB1cgLzNjwsWS36bGXZVZPOJ4pMrdnPleaUcdUlqy2LqF"
   - account: "Assets:Banks:Fio:Savings"
-    importer: *fio_importer # YAML alias (points to a YAML anchor)
+    importer: *fio_importer # YAML alias (points to the YAML anchor in `vars`)
     token: "testKeyXZVZPOJ4pMrdnPleaUcdUlqy2LqFFVqI4dagXgi1eB1cgLzNjwsWS36bG"
 
 # This section is optional, however, Beanclerk prompts you to create it once
@@ -37,13 +37,13 @@ categorization_rules:
   # A list of rules with a 1 example rule
   - matches:
       metadata:
-        # Arbitrary transaction metadata created by an importer. All must match.
-        # Match expresion may be a regex.
+        # Transaction metadata created by an importer. All must match. Match
+        # string may be a regex.
         ks: "05\\d{2}"
     # Values to be added to the transaction
     #
-    # `account`` is an arbitrary Beancount account (it may or may not exist);
-    #   this account becomes the other leg (posting) of the new transactions.
+    # `account` a Beancount account (it does not need to exist); this account
+    #   becomes the other leg (posting) of the new transactions.
     account: "Expenses:Todo"
     flag: "!" # optional; https://github.com/beancount/beancount/blob/v2/beancount/core/flags.py
     payee: "My payee" # optional
