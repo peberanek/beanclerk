@@ -4,6 +4,7 @@ Todo:
     * Some tests are rather incomplete or a mess (mostly sanity only;
     multiple tests, share the same test data). Improve them.
     * Test fn append_entry_to_file.
+    * Test exception handling during import (ImporterError is handled properly).
 """
 import shutil
 from datetime import date

@@ -1,8 +1,5 @@
 """API importer for Fio banka, a.s.
 
-Todo:
-    * handle fio_banka exceptions
-
 docs:
     https://www.fio.cz/bank-services/internetbanking-api
     https://github.com/peberanek/fio-banka
@@ -14,6 +11,7 @@ import fio_banka
 from beancount.core.data import Amount, Transaction
 
 from ..bean_helpers import create_posting, create_transaction
+from ..exceptions import ImporterError
 from . import ApiImporterProtocol, TransactionReport, refine_meta
 
 
@@ -34,9 +32,13 @@ class ApiImporter(ApiImporterProtocol):
         from_date: date,
         to_date: date,
     ) -> TransactionReport:
-        client = fio_banka.Account(self._token)
-        # TODO: handle exceptions
-        statement = client.periods(from_date, to_date, fio_banka.TransactionsFmt.JSON)
+        try:
+            client = fio_banka.Account(self._token)
+            statement = client.periods(
+                from_date, to_date, fio_banka.TransactionsFmt.JSON
+            )
+        except (ValueError, fio_banka.FioBankaError) as exc:
+            raise ImporterError(str(exc)) from exc
 
         txns: list[Transaction] = []
         for txn in fio_banka.get_transactions(statement):
