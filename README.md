@@ -6,13 +6,13 @@
 [![ci tests](https://github.com/peberanek/beanclerk/actions/workflows/tests.yml/badge.svg)](https://github.com/peberanek/beanclerk/actions/workflows/tests.yml)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/peberanek/beanclerk/main.svg)](https://results.pre-commit.ci/latest/github/peberanek/beanclerk/main)
 
-Beanclerk is an extension for [Beancount](https://github.com/beancount/beancount) (Double-Entry Accounting from Text Files). It automates some areas not addressed by Beancount itself, specifically:
+Automation for [Beancount](https://github.com/beancount/beancount).
 
-1. Network downloads (via APIs)
-1. Categorization
-1. Insertion of new transactions
+Features (for rationale see [Notes](#notes)):
 
-(For rationale see [Notes](#notes).)
+* network downloads (via APIs),
+* automated categorization,
+* insertion of new transactions.
 
 Supported data sources:
 
@@ -20,17 +20,19 @@ Supported data sources:
 * [Banka Creditas](https://www.creditas.cz/),
 * or any other source implementing the [API Importer Protocol](https://github.com/peberanek/beanclerk/blob/main/beanclerk/importers/__init__.py).
 
+Project status: **rough prototype**; tested on Linux only.
+
 ## Example
 
-Beanclerk requires a [config file](https://github.com/peberanek/beanclerk/blob/main/tests/beanclerk-config.yml), typically saved alongside an existing ledger:
+Create a [config file](https://github.com/peberanek/beanclerk/blob/main/tests/beanclerk-config.yml) and save it alongside your existing ledger:
 ```
 $ ls
 beanclerk-config.yml  my_ledger.beancount
 ```
 
-With a valid config, import new transactions via the `import` command:
+Import new transactions:
 ```
-$ bean-clerk import
+$ bean-clerk import --from-date 2023-01-01
 Account: 'Assets:Banks:Fio:Checking'
   New transactions: 3, balance OK: 9830.00 CZK
 Account: 'Assets:Banks:Fio:Savings'
@@ -38,16 +40,15 @@ Account: 'Assets:Banks:Fio:Savings'
 ```
 
 > [!IMPORTANT]
-> Beanclerk relies on presence of `id` key in transaction metadata to (1) check for duplicates and (2) to determine the date of the last import. So, you may set the initial import date by adding a transaction like this:
+> Beanclerk relies on `id` key in transaction metadata to check for duplicates and to determine the date of the last import. You may leave out the `--from-date` option by adding a transaction like this:
 > ```
 > 2023-01-01 * "Initial import date for Beanclerk"
 >   id: "dummy"
 >   Assets:Banks:Fio:Checking   0 CZK
 >   Assets:Banks:Fio:Savings    0 CZK
 > ```
-> Make sure to include all accounts defined in the config file.
 
-Once Beanclerk encounters a transaction without a matching categorization rule, it fires up an interactive prompt:
+Once Beanclerk encounters a transaction without a matching categorization rule, it prompts you for resolution:
 ```
 $ bean-clerk import
 Account: 'Assets:Banks:Fio:Checking'
@@ -96,12 +97,7 @@ pip install beanclerk
 ```
 
 > [!IMPORTANT]
-> Beanclerk requires Beancount (v2). As some of its core modules are written in C/C++, you may need `gcc` and `python3-devel` (`python3-dev` on some distros) for its successful installation. For further details check out [Beancount Download & Installation](https://docs.google.com/document/d/1FqyrTPwiHVLyncWTf3v5TcooCu9z5JRX8Nm41lVZi0U/edit#heading=h.rs27hvxo0wyl).
-
-If you prefer to install Beanclerk in an isolated environment, instead of pip use [pipx](https://github.com/pypa/pipx):
-```
-pipx install beanclerk
-```
+> Beanclerk requires Beancount. You may need `gcc` and `python3-devel` (`python3-dev` on some distros) for its successful installation. For further details check out [Beancount Download & Installation](https://docs.google.com/document/d/1FqyrTPwiHVLyncWTf3v5TcooCu9z5JRX8Nm41lVZi0U/edit#heading=h.rs27hvxo0wyl).
 
 Confirm successful installation by running:
 ```
@@ -110,19 +106,15 @@ bean-clerk -h
 
 ## Notes
 
-**Beanclerk is still a rather 'rough' prototype.** You may encounter some unhandled exceptions and the API may change significantly in the future. It is tested on Linux only.
+Beanclerk automates some areas not addressed by Beancount:
 
-As mentioned above, Beanclerk automates some areas not addressed by Beancount:
-
-1. [_Network downloads_](https://beancount.github.io/docs/importing_external_data.html#automating-network-downloads): As financial institutions start to provide access to their services via APIs, it is more convenient and less error-prone to use them instead of a manual download and multi-step import from CSV (or similar) reports. Compared to these reports, APIs usually have a stable specification and provide transaction IDs, making the importing process (e.g. checking for duplicates) much easier. Therefore, inspired by Beancount [Importer Protocol](https://beancount.github.io/docs/importing_external_data.html#writing-an-importer), Beanclerk proposes a simple [API Importer Protocol](https://github.com/peberanek/beanclerk/blob/main/beanclerk/importers/__init__.py) to support any compatible API.
-1. [_Automated categorization_](https://beancount.github.io/docs/importing_external_data.html#automatic-categorization): With growing number of new transactions, manual categorization quickly becomes repetitive, boring and therefore error-prone. So, why not to leave the hard part for machines and then just tweak the details?
-    * As the first step, Beanclerk provides a way to define rules for automated categorization.
-    * The future step is to augment it by machine-learning capabilities (e.g. via integration of the [Smart Importer](https://github.com/beancount/smart_importer)). (Btw, it might be also interesting to use machine-learning to discover patterns or to provide predictions about our financial behavior.)
-1. _Automatic insertion of new transactions_: Beanclerk _appends_ transactions to the Beancount input file (i.e. the ledger) defined in the configuration. It saves the step of doing this manually. (I don't care about a precise position of new transactions in the ledger because reporting tools like [Fava](https://github.com/beancount/fava) sort and filter them effectively.) Consider to keep your ledger under a version control (e.g. via Git) to make any changes easy to review.
+1. [_Network downloads_](https://beancount.github.io/docs/importing_external_data.html#automating-network-downloads): As financial institutions start to provide access to their services via APIs, it is more convenient and less error-prone to use them instead of a manual download and multi-step import from CSV (or similar) reports. Compared to these reports, APIs usually have a stable specification and provide transaction IDs, making the importing process (e.g. checking for duplicates) much easier. Therefore, inspired by Beancount [Importer Protocol](https://beancount.github.io/docs/importing_external_data.html#writing-an-importer), Beanclerk proposes a simple [API Importer Protocol](https://github.com/peberanek/beanclerk/blob/main/beanclerk/importers/__init__.py) to support virtually any API.
+1. [_Automated categorization_](https://beancount.github.io/docs/importing_external_data.html#automatic-categorization): With growing number of new transactions, manual categorization quickly becomes repetitive, boring and error-prone. At the moment, Beanclerk provides a way to define rules for automated categorization. However, it might be interesting to augment it by machine-learning capabilities (e.g. via the [Smart Importer](https://github.com/beancount/smart_importer)).
+1. _Insertion of new transactions_: Beanclerk _appends_ transactions to the Beancount input file (i.e. the ledger) defined in the config. It saves the step of doing this manually. (With reporting tools like [Fava](https://github.com/beancount/fava) I don't care about the precise position of a new transaction in the file.) Consider to keep your ledger under a version control to make any changes easy to review.
 
 ### Similar projects
 
-I started Beanclerk primarily to try out some Python packages and to get better in programming by automating my daily workflow. Actually, there are a couple of interesting projects of similar sort, which may provide inspiration or alternative solutions to the areas described above:
+I started Beanclerk to try out some Python packages and programming concepts. Actually, there are a couple of interesting projects of similar sort:
 
 * [beancount-import](https://github.com/jbms/beancount-import): Web UI for semi-automatically importing external data into beancount.
 * [finance-dl](https://github.com/jbms/finance-dl): Tools for automatically downloading/scraping personal financial data.
@@ -131,8 +123,6 @@ I started Beanclerk primarily to try out some Python packages and to get better 
 * [autobean](https://github.com/SEIAROTg/autobean): A collection of plugins and scripts that help automating bookkeeping with beancount.
 
 ## Contributing
-
-Contributions are welcome. As changes the project is still changing rapidly, make sure to create an issue first so we can discuss it.
 
 Set up a development environment:
 ```bash
@@ -152,4 +142,4 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
 ## License
 
-Following the Beancount license, this code is distributed under the terms of the "GNU GPLv2 only". See `LICENSE` file for details.
+Following the Beancount license, this code is distributed under the terms of the "GNU GPLv2 only".
