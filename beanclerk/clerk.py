@@ -38,7 +38,7 @@ from .bean_helpers import (
     validate_account_name,
 )
 from .config import CategorizationRule, Config, load_config, load_importer
-from .exceptions import ClerkError
+from .exceptions import ClerkError, ImporterError
 from .importers import ApiImporterProtocol
 
 
@@ -255,6 +255,10 @@ def _clr_blue(msg):
     return _clr_style("blue", msg)
 
 
+def _clr_red(msg):
+    return _clr_style("red", msg)
+
+
 def _clr_default(msg):
     # Use 'default' color managed by the terminal
     return _clr_style("default", msg)
@@ -325,11 +329,15 @@ def import_transactions(
             # Beancount does not work with times, `date.today()` should be OK.
             to_date = date.today()
         importer: ApiImporterProtocol = load_importer(account_config)
-        txns, balance = importer.fetch_transactions(
-            bean_account=account_config.account,
-            from_date=from_date,
-            to_date=to_date,
-        )
+        try:
+            txns, balance = importer.fetch_transactions(
+                bean_account=account_config.account,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        except ImporterError as exc:
+            rprint(f"  {_clr_red('Importer Error')}: {exc!s}")
+            continue
 
         new_txns = 0
         for txn in txns:

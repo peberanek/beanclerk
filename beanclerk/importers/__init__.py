@@ -9,6 +9,7 @@ from beancount.core.data import Amount, Transaction
 from lxml import etree
 
 from ..bean_helpers import create_posting, create_transaction
+from ..exceptions import ImporterError
 
 TransactionReport = tuple[list[Transaction], Amount]
 
@@ -46,27 +47,26 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
         TransactionReport: A tuple with the list of transactions and
             the current balance.
     """
-    # TODO: handle etree.XMLSyntaxError
-    # TODO: handle other exceptions
-    xml_root = etree.fromstring(xml)  # noqa: S320
+    try:
+        xml_root = etree.fromstring(xml)  # noqa: S320
+    except etree.XMLSyntaxError as exc:
+        raise ImporterError(f"Invalid XML data: {exc}") from exc
     nsmap = xml_root.nsmap
 
-    # TODO: handle other exceptions
-    # TODO: raise if not found
     def get_amount(element) -> Amount:
         amount = element.find("./Amt", nsmap)
+        if amount is None:
+            raise ImporterError(f"Missing amount in the XML element '{element}'")
         number = Decimal(amount.text)
         currency = amount.attrib["Ccy"]
         if element.find("./CdtDbtInd", nsmap).text == "DBIT":
             number = -number
         return Amount(number, currency)
 
-    # TODO: handle other exceptions
     def get_text(element, xpath: str, *, raise_if_none: bool = False) -> str | None:
         text: str | None = element.findtext(xpath, default=None, namespaces=nsmap)
         if raise_if_none and text is None:
-            # TODO: raise a custom exception
-            raise
+            raise ImporterError(f"Missing text in the XML element '{element}'")
         return text
 
     statement = xml_root.find("./BkToCstmrStmt/Stmt", nsmap)
@@ -153,6 +153,10 @@ class ApiImporterProtocol(abc.ABC):
             bean_account (str): a Beancount account name
             from_date (date): the first date to import
             to_date (date): the last date to import
+
+        Raises:
+            beanclerk.exceptions.ImporterError: when the API returns an error or
+                the data are for some reason invalid.
 
         Returns:
             TransactionReport: A tuple with the list of transactions and
