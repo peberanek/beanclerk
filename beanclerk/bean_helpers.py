@@ -3,55 +3,44 @@ from collections.abc import Generator
 from datetime import date
 from typing import TypeVar
 
-from beancount.core.account import is_valid
-from beancount.core.data import (
-    EMPTY_SET,
-    Account,
-    Amount,
-    Cost,
-    CostSpec,
-    Directive,
-    Flag,
-    Meta,
-    Posting,
-    Transaction,
-)
-from beancount.core.flags import FLAG_OKAY
+import beancount.core.account as bean_account
+import beancount.core.data as bean_data
+import beancount.core.flags as bean_flags
 
 
 def create_transaction(
     _date: date,
-    flag: Flag = FLAG_OKAY,
+    flag: bean_data.Flag = bean_flags.FLAG_OKAY,
     payee: str | None = None,
     narration: str = "",
     tags: frozenset | None = None,
     links: frozenset | None = None,
-    postings: list[Posting] | None = None,
-    meta: Meta | None = None,
-) -> Transaction:
+    postings: list[bean_data.Posting] | None = None,
+    meta: bean_data.Meta | None = None,
+) -> bean_data.Transaction:
     """Return Transaction."""
-    return Transaction(
+    return bean_data.Transaction(
         meta=meta if meta is not None else {},
         date=_date,
         flag=flag,
         payee=payee,
         narration=narration,
-        tags=tags if tags is not None else EMPTY_SET,
-        links=links if links is not None else EMPTY_SET,
+        tags=tags if tags is not None else bean_data.EMPTY_SET,
+        links=links if links is not None else bean_data.EMPTY_SET,
         postings=postings if postings is not None else [],
     )
 
 
 def create_posting(
-    account: Account,
-    units: Amount,
-    cost: Cost | CostSpec | None = None,
-    price: Amount | None = None,
-    flag: Flag | None = None,
-    meta: Meta | None = None,
-) -> Posting:
+    account: bean_data.Account,
+    units: bean_data.Amount,
+    cost: bean_data.Cost | bean_data.CostSpec | None = None,
+    price: bean_data.Amount | None = None,
+    flag: bean_data.Flag | None = None,
+    meta: bean_data.Meta | None = None,
+) -> bean_data.Posting:
     """Return Posting."""
-    return Posting(
+    return bean_data.Posting(
         account=account,
         units=units,
         cost=cost,
@@ -61,10 +50,12 @@ def create_posting(
     )
 
 
-D = TypeVar("D", bound=Directive)
+D = TypeVar("D", bound=bean_data.Directive)
 
 
-def filter_entries(entries: list[Directive], cls: D) -> Generator[D, None, None]:
+def filter_entries(
+    entries: list[bean_data.Directive], cls: D
+) -> Generator[D, None, None]:
     """Yield only instances of a given Beancount directive.
 
     Args:
@@ -85,5 +76,5 @@ def validate_account_name(name: str) -> None:
     Args:
         name (str): a Beancount account name
     """
-    if not is_valid(name):
+    if not bean_account.is_valid(name):
         raise ValueError(f"'{name}' is not a valid Beancount account name")
