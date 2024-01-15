@@ -86,7 +86,7 @@ class Config(BaseSettings):
     model, and raises a `pydantic.ValidationError` on invalid fields.
     """
 
-    vars: Any = None  # noqa: A003
+    vars: Any = None
     input_file: Path
     insert_pythonpath: bool = False
     accounts: list[AccountConfig]
