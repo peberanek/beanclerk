@@ -7,7 +7,7 @@ name = "pypi"
 
 [dev-packages]
 pre-commit = "~=3.3"
-pytest = "~=7.4"
+pytest = "~=8.0"
 beanclerk = {file = ".", editable = true}
 types-pyyaml = "~=6.0"
 
