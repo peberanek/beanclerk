@@ -126,7 +126,7 @@ I started Beanclerk to try out some Python packages and programming concepts. Ac
 
 Set up a development environment:
 ```bash
-pipenv install --dev -e .
+pipenv sync --dev
 pipenv run pre-commit install
 ```
 
