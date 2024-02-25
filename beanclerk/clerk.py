@@ -142,7 +142,7 @@ def find_categorization_rule(
                     return rule
 
         rich.print("No categorization rule matches the following transaction:")
-        rich.print(transaction)
+        rich.print(beancount.parser.printer.format_entry(transaction))
         rich.print("Available actions:")
         rich.print("'r': reload config (you should add a new rule first)")
         rich.print("'i': import as-is (transaction remains unbalanced)")
