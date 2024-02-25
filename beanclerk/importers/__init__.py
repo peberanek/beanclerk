@@ -5,13 +5,14 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from beancount.core.data import Amount, Transaction
-from lxml import etree
+import beancount.core.data as bean_data
+import lxml.etree
 
-from ..bean_helpers import create_posting, create_transaction
-from ..exceptions import ImporterError
+# from ..bean_helpers import create_posting, create_transaction
+# from ..exceptions import ImporterError
+from .. import bean_helpers, exceptions
 
-TransactionReport = tuple[list[Transaction], Amount]
+TransactionReport = tuple[list[bean_data.Transaction], bean_data.Amount]
 
 
 def refine_meta(meta: dict[str, Any]) -> dict[str, str]:
@@ -48,25 +49,29 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
             the current balance.
     """
     try:
-        xml_root = etree.fromstring(xml)  # noqa: S320
-    except etree.XMLSyntaxError as exc:
-        raise ImporterError(f"Invalid XML data: {exc}") from exc
+        xml_root = lxml.etree.fromstring(xml)  # noqa: S320
+    except lxml.etree.XMLSyntaxError as exc:
+        raise exceptions.ImporterError(f"Invalid XML data: {exc}") from exc
     nsmap = xml_root.nsmap
 
-    def get_amount(element) -> Amount:
+    def get_amount(element) -> bean_data.Amount:
         amount = element.find("./Amt", nsmap)
         if amount is None:
-            raise ImporterError(f"Missing amount in the XML element '{element}'")
+            raise exceptions.ImporterError(
+                f"Missing amount in the XML element '{element}'"
+            )
         number = Decimal(amount.text)
         currency = amount.attrib["Ccy"]
         if element.find("./CdtDbtInd", nsmap).text == "DBIT":
             number = -number
-        return Amount(number, currency)
+        return bean_data.Amount(number, currency)
 
     def get_text(element, xpath: str, *, raise_if_none: bool = False) -> str | None:
         text: str | None = element.findtext(xpath, default=None, namespaces=nsmap)
         if raise_if_none and text is None:
-            raise ImporterError(f"Missing text in the XML element '{element}'")
+            raise exceptions.ImporterError(
+                f"Missing text in the XML element '{element}'"
+            )
         return text
 
     statement = xml_root.find("./BkToCstmrStmt/Stmt", nsmap)
@@ -78,7 +83,7 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
     )
     if num_entries == 0:
         return ([], balance)
-    txns: list[Transaction] = []
+    txns: list[bean_data.Transaction] = []
     for entry in statement.findall("./Ntry", nsmap):
         # Related party may be a debitor or a creditor.
         if get_text(entry, "./CdtDbtInd", raise_if_none=True) == "DBIT":
@@ -105,7 +110,7 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
             },
         )
         txns.append(
-            create_transaction(
+            bean_helpers.create_transaction(
                 _date=date.fromisoformat(
                     get_text(
                         entry,
@@ -114,7 +119,7 @@ def parse_camt_053_001_02(xml: bytes, bean_account: str) -> TransactionReport:
                     ),  # type: ignore[arg-type]
                 ),
                 postings=[
-                    create_posting(
+                    bean_helpers.create_posting(
                         account=bean_account,
                         units=get_amount(entry),
                     ),

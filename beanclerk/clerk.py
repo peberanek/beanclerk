@@ -24,41 +24,35 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from beancount.core.data import Amount, Directive, Transaction, TxnPosting
-from beancount.core.realization import compute_postings_balance, postings_by_account
-from beancount.loader import load_file
-from beancount.parser.printer import print_entry
-from rich import print as rprint
-from rich.prompt import Prompt
+import beancount.core.data as bean_data
+import beancount.core.realization
+import beancount.loader
+import beancount.parser.printer
+import rich
+import rich.prompt
 
-from .bean_helpers import (
-    create_posting,
-    create_transaction,
-    filter_entries,
-    validate_account_name,
-)
-from .config import CategorizationRule, Config, load_config, load_importer
-from .exceptions import ClerkError, ImporterError
-from .importers import ApiImporterProtocol
+from . import bean_helpers, config, exceptions, importers
 
 
-def find_last_import_date(entries: list[Directive], account_name: str) -> date | None:
+def find_last_import_date(
+    entries: list[bean_data.Directive], account_name: str
+) -> date | None:
     """Return date of the last imported transaction, or None if not found.
 
     This function searches for the latest transaction with `id` key in its
     metadata. Entries must be properly ordered.
 
     Args:
-        entries (list[Directive]): a list of Beancount directives
+        entries (list[beancount.core.data.Directive]): a list of Beancount directives
         account_name (str): Beancount account name
 
     Returns:
         date | None
     """
-    validate_account_name(account_name)
-    txn_postings = filter_entries(
-        postings_by_account(entries)[account_name],
-        TxnPosting,
+    bean_helpers.validate_account_name(account_name)
+    txn_postings = bean_helpers.filter_entries(
+        beancount.core.realization.postings_by_account(entries)[account_name],
+        bean_data.TxnPosting,
     )
     for txn_posting in reversed(list(txn_postings)):  # latest first
         if txn_posting.txn.meta.get("id") is not None:
@@ -67,57 +61,57 @@ def find_last_import_date(entries: list[Directive], account_name: str) -> date |
 
 
 def transaction_exists(
-    entries: list[Directive],
+    entries: list[bean_data.Directive],
     account_name: str,
     txn_id: str,
 ) -> bool:
     """Return True if the account has a transaction with the given ID.
 
     Args:
-        entries (list[Directive]): a list of Beancount directives
+        entries (list[beancount.core.data.Directive]): a list of Beancount directives
         account_name (str): Beancount account name
         txn_id (str): transaction ID (`id` key in its metadata)
 
     Returns:
         bool
     """
-    validate_account_name(account_name)
-    txn_postings = filter_entries(
-        postings_by_account(entries)[account_name],
-        TxnPosting,
+    bean_helpers.validate_account_name(account_name)
+    txn_postings = bean_helpers.filter_entries(
+        beancount.core.realization.postings_by_account(entries)[account_name],
+        bean_data.TxnPosting,
     )
     return any(txn_posting.txn.meta.get("id") == txn_id for txn_posting in txn_postings)
 
 
 def compute_balance(
-    entries: list[Directive],
+    entries: list[bean_data.Directive],
     account_name: str,
     currency: str,
-) -> Amount:
+) -> bean_data.Amount:
     """Return account balance for the given account and currency.
 
     If the account does not exist, it returns Amount 0.
 
     Args:
-        entries (list[Directive]): a list of Beancount directives
+        entries (list[beancount.core.data.Directive]): a list of Beancount directives
         account_name (str): Beancount account name
         currency (str): currency ISO code (e.g. 'USD')
 
     Returns:
         Amount: account balance
     """
-    validate_account_name(account_name)
+    bean_helpers.validate_account_name(account_name)
     if not re.match(r"^[A-Z]{3}$", currency):
         raise ValueError(f"'{currency}' is not a valid currency code")
-    return compute_postings_balance(
-        postings_by_account(entries)[account_name],
+    return beancount.core.realization.compute_postings_balance(
+        beancount.core.realization.postings_by_account(entries)[account_name],
     ).get_currency_units(currency)
 
 
 def find_categorization_rule(
-    transaction: Transaction,
-    config: Config,
-) -> CategorizationRule | None:
+    transaction: bean_data.Transaction,
+    cfg: config.Config,
+) -> config.CategorizationRule | None:
     """Return a categorization rule matching the given transaction.
 
     If no rule matches the transaction, the user is prompted to choose
@@ -125,8 +119,8 @@ def find_categorization_rule(
     to categorize the transaction, None is returned then.
 
     Args:
-        transaction (Transaction): a Beancount transaction
-        config (Config): Beanclerk config
+        transaction (beancount.core.data.Transaction): a Beancount transaction
+        cfg (Config): Beanclerk config
 
     Raises:
         ClerkError: if an unexpected action is chosen by the user.
@@ -135,8 +129,8 @@ def find_categorization_rule(
         CategorizationRule | None: a matching rule, or None
     """
     while True:
-        if config.categorization_rules:
-            for rule in config.categorization_rules:
+        if cfg.categorization_rules:
+            for rule in cfg.categorization_rules:
                 num_matches = 0
                 for key, pattern in rule.matches.metadata.items():
                     if (
@@ -147,28 +141,30 @@ def find_categorization_rule(
                 if num_matches == len(rule.matches.metadata):
                     return rule
 
-        rprint("No categorization rule matches the following transaction:")
-        rprint(transaction)
-        rprint("Available actions:")
-        rprint("'r': reload config (you should add a new rule first)")
-        rprint("'i': import as-is (transaction remains unbalanced)")
-        match Prompt.ask("Enter the action", choices=["r", "i"]):
+        rich.print("No categorization rule matches the following transaction:")
+        rich.print(beancount.parser.printer.format_entry(transaction))
+        rich.print("Available actions:")
+        rich.print("'r': reload config (you should add a new rule first)")
+        rich.print("'i': import as-is (transaction remains unbalanced)")
+        match rich.prompt.Prompt.ask("Enter the action", choices=["r", "i"]):
             case "r":
                 # Reload only the categorization rules, changing the other
                 # parts of the config may cause unexpected issues down
                 # the road.
-                config.categorization_rules = load_config(
-                    config.config_file,
+                cfg.categorization_rules = config.load_config(
+                    cfg.config_file,
                 ).categorization_rules
                 continue
             case "i":
                 break
             case _ as action:
-                raise ClerkError(f"Unknown action: {action}")
+                raise exceptions.ClerkError(f"Unknown action: {action}")
     return None
 
 
-def categorize(transaction: Transaction, config: Config) -> Transaction:
+def categorize(
+    transaction: bean_data.Transaction, cfg: config.Config
+) -> bean_data.Transaction:
     """Return transaction categorized according to rules set in config.
 
     Categorization means adding any missing postings (legs) to a transaction
@@ -182,8 +178,8 @@ def categorize(transaction: Transaction, config: Config) -> Transaction:
     found.
 
     Args:
-        transaction (Transaction): a Beancount transaction
-        config (Config): Beanclerk config
+        transaction (beancount.core.data.Transaction): a Beancount transaction
+        cfg (Config): Beanclerk config
 
     Side effects:
         * `config.categorization_rules` may be modified if the user chooses
@@ -191,21 +187,21 @@ def categorize(transaction: Transaction, config: Config) -> Transaction:
         categorization process.
 
     Returns:
-        Transaction: a Beancount transaction
+        beancount.core.data.Transaction: a Beancount transaction
     """
-    rule = find_categorization_rule(transaction, config)
+    rule = find_categorization_rule(transaction, cfg)
     if rule is None:
         return transaction
     # Do categorize (Transaction is immutable, so we need to create a new one)
     units = transaction.postings[0].units
     postings = copy.deepcopy(transaction.postings)
     postings.append(
-        create_posting(
+        bean_helpers.create_posting(
             account=rule.account,
-            units=Amount(-units.number, units.currency),
+            units=bean_data.Amount(-units.number, units.currency),
         ),
     )
-    return create_transaction(
+    return bean_helpers.create_transaction(
         _date=transaction.date,
         flag=rule.flag if rule.flag is not None else transaction.flag,
         payee=rule.payee if rule.payee is not None else transaction.payee,
@@ -217,11 +213,11 @@ def categorize(transaction: Transaction, config: Config) -> Transaction:
     )
 
 
-def append_entry_to_file(entry: Directive, filepath: Path) -> None:
+def append_entry_to_file(entry: bean_data.Directive, filepath: Path) -> None:
     """Append an entry to a file.
 
     Args:
-        entry (Directive): a Beancount directive
+        entry (beancount.core.data.Directive): a Beancount directive
         filepath (Path): a file path
     """
     with filepath.open("r") as f:
@@ -234,7 +230,7 @@ def append_entry_to_file(entry: Directive, filepath: Path) -> None:
             f.write(2 * "\n")
         else:
             f.write("\n")
-        print_entry(entry, file=f)
+        beancount.parser.printer.print_entry(entry, file=f)
 
 
 def _clr_style(style, msg):
@@ -266,8 +262,8 @@ def _clr_default(msg):
 
 def print_import_status(
     new_txns: int,
-    importer_balance: Amount,
-    bean_balance: Amount,
+    importer_balance: bean_data.Amount,
+    bean_balance: bean_data.Amount,
 ) -> None:
     """Print import status to stdout.
 
@@ -287,7 +283,7 @@ def print_import_status(
         txns_status = f"{_clr_default(new_txns)}"
     else:
         txns_status = f"{_clr_blue(new_txns)}"
-    rprint(f"  New transactions: {txns_status}, balance {balance_status}")
+    rich.print(f"  New transactions: {txns_status}, balance {balance_status}")
 
 
 def import_transactions(
@@ -306,46 +302,46 @@ def import_transactions(
         ClerkError: raised if there are errors in the input file
         ClerkError: raised if the initial import date cannot be determined
     """
-    config = load_config(config_file)
+    cfg = config.load_config(config_file)
 
-    if config.insert_pythonpath:
-        sys.path.insert(0, str(config.input_file.parent))
+    if cfg.insert_pythonpath:
+        sys.path.insert(0, str(cfg.input_file.parent))
 
-    entries, errors, _ = load_file(config.input_file)
+    entries, errors, _ = beancount.loader.load_file(cfg.input_file)
     if errors != []:
         # TODO: format errors via beancount.parser.printer.format_errors
-        raise ClerkError(f"Errors in the input file: {errors}")
+        raise exceptions.ClerkError(f"Errors in the input file: {errors}")
 
-    for account_config in config.accounts:
-        rprint(f"Account: '{account_config.account}'")
+    for account_cfg in cfg.accounts:
+        rich.print(f"Account: '{account_cfg.account}'")
         if from_date is None:
             # TODO: sort entries by date
-            last_date = find_last_import_date(entries, account_config.account)
+            last_date = find_last_import_date(entries, account_cfg.account)
             if last_date is None:
                 # TODO: catch and add a note the user should use --from-date option
-                raise ClerkError("Cannot determine the initial import date.")
+                raise exceptions.ClerkError("Cannot determine the initial import date.")
             from_date = last_date
         if to_date is None:
             # Beancount does not work with times, `date.today()` should be OK.
             to_date = date.today()
-        importer: ApiImporterProtocol = load_importer(account_config)
+        importer: importers.ApiImporterProtocol = config.load_importer(account_cfg)
         try:
             txns, balance = importer.fetch_transactions(
-                bean_account=account_config.account,
+                bean_account=account_cfg.account,
                 from_date=from_date,
                 to_date=to_date,
             )
-        except ImporterError as exc:
-            rprint(f"  {_clr_red('Importer Error')}: {exc!s}")
+        except exceptions.ImporterError as exc:
+            rich.print(f"  {_clr_red('Importer Error')}: {exc!s}")
             continue
 
         new_txns = 0
         for txn in txns:
-            if transaction_exists(entries, account_config.account, txn.meta["id"]):
+            if transaction_exists(entries, account_cfg.account, txn.meta["id"]):
                 continue
             new_txns += 1
-            txn = categorize(txn, config)  # noqa: PLW2901
-            append_entry_to_file(txn, config.input_file)
+            txn = categorize(txn, cfg)  # noqa: PLW2901
+            append_entry_to_file(txn, cfg.input_file)
 
             # HACK: Update the list of entries without reloading the whole input
             #   file (it may be a quite slow with the Beancount v2). This way
@@ -356,5 +352,5 @@ def import_transactions(
         print_import_status(
             new_txns,
             balance,
-            compute_balance(entries, account_config.account, balance.currency),
+            compute_balance(entries, account_cfg.account, balance.currency),
         )

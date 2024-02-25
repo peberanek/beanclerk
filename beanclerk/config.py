@@ -16,24 +16,18 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pydantic
+import pydantic_settings
 import yaml
-from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
-from pydantic_settings import (
-    BaseSettings,
-    PydanticBaseSettingsSource,
-    SettingsConfigDict,
-)
 
-from .bean_helpers import validate_account_name
-from .exceptions import ConfigError
-from .importers import ApiImporterProtocol
+from . import bean_helpers, exceptions, importers
 
 
-class _BaseModelStrict(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class _BaseModelStrict(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(extra="forbid")
 
 
-class AccountConfig(BaseModel):
+class AccountConfig(pydantic.BaseModel):
     """Account config model.
 
     Allows extra fields to support custom configuration of importers.
@@ -42,12 +36,12 @@ class AccountConfig(BaseModel):
     account: str
     importer: str
 
-    model_config = ConfigDict(extra="allow")  # allows access to extra fields
+    model_config = pydantic.ConfigDict(extra="allow")  # allows access to extra fields
 
-    @field_validator("account")
+    @pydantic.field_validator("account")
     def name_is_valid(cls, name: str) -> str:
         """Validate account name."""
-        validate_account_name(name)
+        bean_helpers.validate_account_name(name)
         return name
 
 
@@ -56,7 +50,7 @@ class MatchCategories(_BaseModelStrict):
 
     metadata: dict[str, str]
 
-    @field_validator("metadata")
+    @pydantic.field_validator("metadata")
     def metadata_is_valid(cls, metadata: dict[str, str]) -> dict[str, str]:
         """Validate metadata."""
         if not metadata:
@@ -79,7 +73,7 @@ class CategorizationRule(_BaseModelStrict):
     narration: str | None = None
 
 
-class Config(BaseSettings):
+class Config(pydantic_settings.BaseSettings):
     """Beanclerk config model.
 
     Most attributes are defined in a config file. Config is a Pydantic
@@ -95,13 +89,13 @@ class Config(BaseSettings):
     # fields not present in the config file
     config_file: Path
 
-    model_config = SettingsConfigDict(
+    model_config = pydantic_settings.SettingsConfigDict(
         extra="forbid",
         env_file=".env",
         env_prefix="beanclerk_",  # case-insensitive
     )
 
-    @field_validator("input_file")
+    @pydantic.field_validator("input_file")
     def input_file_exists(cls, input_file: Path) -> Path:
         """Validate input file exists.
 
@@ -119,12 +113,12 @@ class Config(BaseSettings):
     @classmethod
     def settings_customise_sources(  # noqa: D102
         cls,
-        settings_cls: type[BaseSettings],  # noqa: ARG003
-        init_settings: PydanticBaseSettingsSource,
-        env_settings: PydanticBaseSettingsSource,
-        dotenv_settings: PydanticBaseSettingsSource,
-        file_secret_settings: PydanticBaseSettingsSource,
-    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        settings_cls: type[pydantic_settings.BaseSettings],  # noqa: ARG003
+        init_settings: pydantic_settings.PydanticBaseSettingsSource,
+        env_settings: pydantic_settings.PydanticBaseSettingsSource,
+        dotenv_settings: pydantic_settings.PydanticBaseSettingsSource,
+        file_secret_settings: pydantic_settings.PydanticBaseSettingsSource,
+    ) -> tuple[pydantic_settings.PydanticBaseSettingsSource, ...]:
         # Change the default order of priority:
         # https://docs.pydantic.dev/latest/usage/pydantic_settings/#customise-settings-sources
         return (env_settings, dotenv_settings, init_settings, file_secret_settings)
@@ -147,11 +141,11 @@ def load_config(filepath: Path) -> Config:
             contents = yaml.safe_load(file)
             contents["config_file"] = filepath
             return Config.model_validate(contents)
-    except (OSError, yaml.YAMLError, ValidationError) as exc:
-        raise ConfigError(str(exc)) from exc
+    except (OSError, yaml.YAMLError, pydantic.ValidationError) as exc:
+        raise exceptions.ConfigError(str(exc)) from exc
 
 
-def load_importer(account_config: AccountConfig) -> ApiImporterProtocol:
+def load_importer(account_config: AccountConfig) -> importers.ApiImporterProtocol:
     """Return an instance of importer defined in the account config.
 
     Args:
@@ -168,16 +162,16 @@ def load_importer(account_config: AccountConfig) -> ApiImporterProtocol:
     try:
         cls = getattr(importlib.import_module(module), name)
     except (ImportError, AttributeError) as exc:
-        raise ConfigError(
+        raise exceptions.ConfigError(
             f"Cannot import '{account_config.importer}': {exc!s}",
         ) from exc
-    if not issubclass(cls, ApiImporterProtocol):
-        raise ConfigError(
+    if not issubclass(cls, importers.ApiImporterProtocol):
+        raise exceptions.ConfigError(
             f"'{account_config.importer}' is not a subclass of ApiImporterProtocol",
         )
     try:
         return cls(**account_config.model_extra)
     except (TypeError, ValueError) as exc:
-        raise ConfigError(
+        raise exceptions.ConfigError(
             f"Cannot instantiate '{account_config.importer}': {exc!s}",
         ) from exc

@@ -54,36 +54,19 @@ $ bean-clerk import
 Account: 'Assets:Banks:Fio:Checking'
 ...
 No categorization rule matches the following transaction:
-Transaction(
-    meta={
-        'id': '10000000002',
-        'account_id': '2345678901',
-        'account_name': 'Pavel, Žák',
-        'bank_id': '2010',
-        'bank_name': 'Fio banka, a.s.',
-        'type': 'Příjem převodem uvnitř banky',
-        'specification': 'test specification',
-        'bic': 'TESTBICXXXX',
-        'order_id': '30000000002',
-        'payer_reference': 'test payer reference'
-    },
-    date=datetime.date(2023, 1, 3),
-    flag='*',
-    payee=None,
-    narration='',
-    tags=frozenset(),
-    links=frozenset(),
-    postings=[
-        Posting(
-            account='Assets:Banks:Fio:Checking',
-            units=500.0 CZK,
-            cost=None,
-            price=None,
-            flag=None,
-            meta={}
-        )
-    ]
-)
+2023-01-03 *
+  id: "10000000002"
+  account_id: "2345678901"
+  account_name: "Pavel, Žák"
+  bank_id: "2010"
+  bank_name: "Fio banka, a.s."
+  type: "Příjem převodem uvnitř banky"
+  specification: "test specification"
+  bic: "TESTBICXXXX"
+  order_id: "30000000002"
+  payer_reference: "test payer reference"
+  Assets:Banks:Fio:Checking  500.0 CZK
+
 Available actions:
 'r': reload config (you should add a new rule first)
 'i': import as-is (transaction remains unbalanced)
@@ -126,7 +109,7 @@ I started Beanclerk to try out some Python packages and programming concepts. Ac
 
 Set up a development environment:
 ```bash
-pipenv install --dev -e .
+pipenv sync --dev
 pipenv run pre-commit install
 ```
 

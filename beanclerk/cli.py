@@ -5,8 +5,7 @@ from pathlib import Path
 
 import click
 
-from .clerk import import_transactions
-from .exceptions import BeanclerkError
+from . import clerk, exceptions
 
 CONFIG_FILE = "beanclerk-config.yml"
 
@@ -62,10 +61,10 @@ class Date(click.ParamType):
 def import_(ctx: click.Context, from_date: date, to_date: date) -> None:
     """Import transactions and check the current balance."""
     try:
-        import_transactions(
+        clerk.import_transactions(
             config_file=ctx.obj["config_file"],
             from_date=from_date,
             to_date=to_date,
         )
-    except BeanclerkError as exc:
+    except exceptions.BeanclerkError as exc:
         raise click.ClickException(str(exc)) from exc

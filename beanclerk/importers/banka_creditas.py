@@ -11,7 +11,7 @@ from datetime import date
 
 import creditas
 
-from ..exceptions import ImporterError
+from .. import exceptions
 from . import ApiImporterProtocol, TransactionReport, parse_camt_053_001_02
 
 
@@ -60,7 +60,7 @@ class ApiImporter(ApiImporterProtocol):
             ) = api.d_ps_account_transaction_export_api(body=body)
             return base64.b64decode(data.export)
         except (creditas.rest.ApiException, binascii.Error) as exc:
-            raise ImporterError(str(exc)) from exc
+            raise exceptions.ImporterError(str(exc)) from exc
 
     def fetch_transactions(  # noqa: D102
         self,

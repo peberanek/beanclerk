@@ -7,11 +7,10 @@ docs:
 
 from datetime import date
 
+import beancount.core.data as bean_data
 import fio_banka
-from beancount.core.data import Amount, Transaction
 
-from ..bean_helpers import create_posting, create_transaction
-from ..exceptions import ImporterError
+from .. import bean_helpers, exceptions
 from . import ApiImporterProtocol, TransactionReport, refine_meta
 
 
@@ -33,22 +32,22 @@ class ApiImporter(ApiImporterProtocol):
         to_date: date,
     ) -> TransactionReport:
         try:
-            client = fio_banka.Account(self._token)
-            statement = client.periods(
-                from_date, to_date, fio_banka.TransactionsFmt.JSON
+            account = fio_banka.Account(self._token)
+            transaction_report = account.fetch_transaction_report_for_period(
+                from_date, to_date, fio_banka.TransactionReportFmt.JSON
             )
         except (ValueError, fio_banka.FioBankaError) as exc:
-            raise ImporterError(str(exc)) from exc
+            raise exceptions.ImporterError(str(exc)) from exc
 
-        txns: list[Transaction] = []
-        for txn in fio_banka.get_transactions(statement):
+        txns: list[bean_data.Transaction] = []
+        for txn in account.parse_transactions(transaction_report):
             txns.append(
-                create_transaction(
+                bean_helpers.create_transaction(
                     _date=txn.date,
                     postings=[
-                        create_posting(
+                        bean_helpers.create_posting(
                             account=bean_account,
-                            units=Amount(txn.amount, txn.currency),
+                            units=bean_data.Amount(txn.amount, txn.currency),
                         ),
                     ],
                     meta=refine_meta(
@@ -75,5 +74,8 @@ class ApiImporter(ApiImporterProtocol):
                 ),
             )
 
-        account_info = fio_banka.get_account_info(statement)
-        return (txns, Amount(account_info.closing_balance, account_info.currency))
+        account_info = account.parse_account_info(transaction_report)
+        return (
+            txns,
+            bean_data.Amount(account_info.closing_balance, account_info.currency),
+        )
