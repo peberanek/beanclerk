@@ -32,15 +32,15 @@ class ApiImporter(ApiImporterProtocol):
         to_date: date,
     ) -> TransactionReport:
         try:
-            client = fio_banka.Account(self._token)
-            statement = client.periods(
-                from_date, to_date, fio_banka.TransactionsFmt.JSON
+            account = fio_banka.Account(self._token)
+            transaction_report = account.fetch_transaction_report_for_period(
+                from_date, to_date, fio_banka.TransactionReportFmt.JSON
             )
         except (ValueError, fio_banka.FioBankaError) as exc:
             raise exceptions.ImporterError(str(exc)) from exc
 
         txns: list[bean_data.Transaction] = []
-        for txn in fio_banka.get_transactions(statement):
+        for txn in account.parse_transactions(transaction_report):
             txns.append(
                 bean_helpers.create_transaction(
                     _date=txn.date,
@@ -74,7 +74,7 @@ class ApiImporter(ApiImporterProtocol):
                 ),
             )
 
-        account_info = fio_banka.get_account_info(statement)
+        account_info = account.parse_account_info(transaction_report)
         return (
             txns,
             bean_data.Amount(account_info.closing_balance, account_info.currency),

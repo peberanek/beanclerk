@@ -15,9 +15,13 @@ TOP_DIR = Path(os.path.realpath(__file__)).parent
 def _mock_fio_banka(monkeypatch: pytest.MonkeyPatch):
     """Mock fio_banka package."""
 
-    def mock__request(*args, **kwargs) -> str:
+    class MockResponse:
+        def __init__(self, text) -> None:
+            self.text = text
+
+    def mock__request(*args, **kwargs) -> MockResponse:
         with (TOP_DIR / "importers" / "fio_banka_transactions.json").open("r") as file:
-            return file.read()
+            return MockResponse(file.read())
 
     monkeypatch.setattr(fio_banka.Account, "_request", mock__request)
 
