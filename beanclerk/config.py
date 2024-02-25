@@ -91,7 +91,7 @@ class Config(pydantic_settings.BaseSettings):
 
     model_config = pydantic_settings.SettingsConfigDict(
         extra="forbid",
-        env_file=".env",
+        env_file=".beanclerk_env",
         env_prefix="beanclerk_",  # case-insensitive
     )
 
