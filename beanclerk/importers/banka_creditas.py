@@ -55,9 +55,9 @@ class ApiImporter(ApiImporterProtocol):
             ),
         )
         try:
-            data: (
-                creditas.InlineResponse20011
-            ) = api.d_ps_account_transaction_export_api(body=body)
+            data: creditas.InlineResponse20011 = (
+                api.d_ps_account_transaction_export_api(body=body)
+            )
             return base64.b64decode(data.export)
         except (creditas.rest.ApiException, binascii.Error) as exc:
             raise exceptions.ImporterError(str(exc)) from exc

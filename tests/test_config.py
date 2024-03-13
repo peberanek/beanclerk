@@ -1,4 +1,5 @@
 """Tests of the config module."""
+
 from pathlib import Path
 
 import pydantic
