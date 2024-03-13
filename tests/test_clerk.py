@@ -6,6 +6,7 @@ Todo:
     * Test fn append_entry_to_file.
     * Test exception handling during import (ImporterError is handled properly).
 """
+
 import shutil
 from datetime import date
 from decimal import Decimal
