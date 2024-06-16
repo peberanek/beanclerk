@@ -25,7 +25,7 @@ classifiers = [
 # in sync.
 dependencies = [
   "PyYAML~=6.0",
-  "beancount~=2.3",
+  "beancount~=3.0",
   "click~=8.1",
   "creditas==1.0.0.*", # https://github.com/peberanek/creditas/blob/main/README.md#versioning
   "fio-banka~=3.0",
