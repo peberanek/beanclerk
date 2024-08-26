@@ -34,7 +34,7 @@ from .conftest import TOP_DIR
 CZK = "CZK"
 
 
-@pytest.fixture()
+@pytest.fixture
 def entries() -> list[Transaction]:
     """Return a list of Beancount entries."""
     account = "Assets:Dummy"
@@ -67,13 +67,13 @@ def test_transaction_exists(entries: list[Transaction]) -> None:
     assert not transaction_exists(entries, account, "-1")
 
 
-@pytest.fixture()
+@pytest.fixture
 def config(config_file: Path, ledger: Path) -> Config:
     """Return a Beanclerk Config object."""
     return load_config(config_file)
 
 
-@pytest.fixture()
+@pytest.fixture
 def _mock_prompt(monkeypatch) -> None:
     """Mock rich.Prompt.ask."""
 
@@ -149,7 +149,7 @@ def test_import_transactions(config_file: Path, ledger: Path):
         assert transaction_exists(entries, account, txn_id)
 
 
-@pytest.fixture()
+@pytest.fixture
 def _local_importer(tmp_path) -> None:
     shutil.copy(TOP_DIR / "importers" / "local_importers.py", tmp_path)
 
