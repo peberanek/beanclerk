@@ -17,8 +17,8 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-      - name: Install dependencies
+          python-version-file: "pyproject.toml"
+      - name: Install dependencies  # TODO: using uv instead of pip?
         run: python3 -m pip install --upgrade build
       - name: Build package
         run: python3 -m build
