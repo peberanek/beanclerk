@@ -109,16 +109,13 @@ I started Beanclerk to try out some Python packages and programming concepts. Ac
 
 Set up a development environment:
 ```bash
-pipenv sync --dev
-pipenv run pre-commit install
+uv sync
+uv run pre-commit install
 ```
-
-> [!NOTE]
-> If you prefer to create the virtual environment in the project's directory, add `PIPENV_VENV_IN_PROJECT=1` into `.env` file. For more info see [Virtualenv mapping caveat](https://pipenv.pypa.io/en/latest/installation/#virtualenv-mapping-caveat).
 
 Run tests:
 ```bash
-pytest
+uv run pytest
 ```
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).

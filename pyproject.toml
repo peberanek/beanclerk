@@ -132,3 +132,10 @@ max-args = 7
 
 [tool.ruff.pydocstyle]
 convention = "google"
+
+[dependency-groups]
+dev = [
+    "pre-commit~=4.0",
+    "pytest~=8.0",
+    "types-pyyaml~=6.0",
+]
