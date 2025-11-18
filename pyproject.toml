@@ -136,6 +136,6 @@ convention = "google"
 [dependency-groups]
 dev = [
     "pre-commit~=4.0",
-    "pytest~=8.0",
+    "pytest~=9.0",
     "types-pyyaml~=6.0",
 ]
